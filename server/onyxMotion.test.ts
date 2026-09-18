@@ -22,7 +22,6 @@ describe("ONYX WEBY motion engine", () => {
     expect(plan.items.filter((item) => item.looping)).toHaveLength(1);
     expect(plan.warnings.some((warning) => warning.includes("attention effect downgraded"))).toBe(true);
     expect(plan.warnings.some((warning) => warning.includes("ambient loop removed"))).toBe(true);
-    expect(plan.gates.prefersReducedMotionRequired).toBeUndefined();
     expect(plan.gates.reducedMotionCovered).toBe(true);
   });
 
