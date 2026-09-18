@@ -26,7 +26,7 @@ Neither upstream project becomes a new OS, cockpit, or source of tenant authorit
 
 The first capability is available from the local deterministic ONYX planner even when all external adapters are offline.
 
-Current POC truth: `web.motion.plan`, `web.motion.apply`, `web.motion.export`, and project-level `web.video.render` have implemented backend paths. Direct `web.motion.preview` and automatic page/component/URL → html-video storyboard ingestion remain explicitly **NOT IMPLEMENTED** until the next adapter slice.
+Current POC truth: `web.motion.plan`, `web.motion.apply`, `web.motion.export`, `web.video.fromPage`, `web.video.fromComponent`, `web.video.fromUrl`, and project-level `web.video.render` have implemented backend paths. Direct `web.motion.preview` remains explicitly **NOT IMPLEMENTED** until ONYX owns a safe tenant-scoped preview proxy.
 
 ## Restraint gates
 
@@ -82,6 +82,9 @@ The adapter currently uses the upstream Studio API verified from `nexu-io/html-v
 
 - `GET /api/projects` — health/probe
 - `POST /api/projects` — create a video/storyboard project
+- `POST /api/projects/:id/assets` — attach ONYX WEBY HTML/component source material
+- `POST /api/projects/:id/messages` — drive agent generation; pasted public URLs are fetched upstream and grounded into the project
+- `GET /api/projects/:id` — retrieve the generated project state
 - `POST /api/projects/:id/export` — blocking MP4 export
 
 More granular storyboard generation can be added behind the same ONYX capability surface without changing clients.
