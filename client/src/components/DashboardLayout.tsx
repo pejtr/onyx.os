@@ -84,6 +84,7 @@ const allMenuItems = [
   { icon: Inbox,        labelKey: "sidebar.externalLeads",    path: "/external-leads",  group: "intelligence" },
   { icon: MapPin,       labelKey: "sidebar.googleMapsScraper", path: "/google-maps-scraper", group: "intelligence" },
   { icon: Globe,        labelKey: "sidebar.webAudit",          path: "/web-audit",       group: "intelligence" },
+  { icon: Sparkles,     labelKey: "sidebar.webMotion",         path: "/web-motion",      group: "intelligence" },
   { icon: ShieldCheck,  labelKey: "sidebar.emailVerify",      path: "/email-verify",    group: "intelligence" },
   { icon: Code,         labelKey: "sidebar.trackingPixel",    path: "/tracking",        group: "intelligence" },
   { icon: Cpu,          labelKey: "sidebar.techStack",        path: "/tech-stack",      group: "intelligence" },
