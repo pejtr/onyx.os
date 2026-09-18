@@ -325,6 +325,46 @@ async function fetchJson(
   }
 }
 
+async function fetchText(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  fetchImpl: FetchLike = fetch,
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(url, { ...init, signal: controller.signal });
+    const body = await response.text();
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${body.slice(0, 500)}`);
+    }
+    return body;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function assertPublicSourceUrl(value: string) {
+  const url = new URL(value);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("SOURCE_URL_MUST_BE_HTTP");
+  }
+  const host = url.hostname.toLowerCase();
+  if (
+    host === "localhost" ||
+    host.endsWith(".local") ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+  ) {
+    throw new Error("PRIVATE_SOURCE_URL_BLOCKED");
+  }
+  return url.toString();
+}
+
 function normalizedBaseUrl(value?: string) {
   const raw = value?.trim();
   if (!raw) return null;
@@ -465,6 +505,11 @@ export class HtmlVideoAdapter {
     this.baseUrl = normalizedBaseUrl(baseUrl);
   }
 
+  private requireBaseUrl() {
+    if (!this.baseUrl) throw new Error("HTML_VIDEO_NOT_CONFIGURED");
+    return this.baseUrl;
+  }
+
   async status(fetchImpl?: FetchLike): Promise<OnyxMotionAdapterStatus> {
     if (!this.baseUrl) {
       return {
@@ -504,9 +549,9 @@ export class HtmlVideoAdapter {
     intent?: string;
     preferences?: Record<string, unknown>;
   }) {
-    if (!this.baseUrl) throw new Error("HTML_VIDEO_NOT_CONFIGURED");
+    const baseUrl = this.requireBaseUrl();
     return fetchJson(
-      `${this.baseUrl}/api/projects`,
+      `${baseUrl}/api/projects`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -516,12 +561,108 @@ export class HtmlVideoAdapter {
     );
   }
 
-  async exportProject(projectId: string) {
-    if (!this.baseUrl) throw new Error("HTML_VIDEO_NOT_CONFIGURED");
+  async getProject(projectId: string) {
+    const baseUrl = this.requireBaseUrl();
     return fetchJson(
-      `${this.baseUrl}/api/projects/${encodeURIComponent(projectId)}/export`,
+      `${baseUrl}/api/projects/${encodeURIComponent(projectId)}`,
+      { method: "GET" },
+      15000,
+    );
+  }
+
+  async addTextAsset(projectId: string, content: string, caption?: string) {
+    const baseUrl = this.requireBaseUrl();
+    return fetchJson(
+      `${baseUrl}/api/projects/${encodeURIComponent(projectId)}/assets`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind: "text", content, caption }),
+      },
+      30000,
+    );
+  }
+
+  async sendMessage(projectId: string, content: string) {
+    const baseUrl = this.requireBaseUrl();
+    await fetchText(
+      `${baseUrl}/api/projects/${encodeURIComponent(projectId)}/messages`,
+      {
+        method: "POST",
+        headers: {
+          accept: "text/event-stream",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+      },
+      600000,
+    );
+    return this.getProject(projectId);
+  }
+
+  async generateFromUrl(input: {
+    name: string;
+    url: string;
+    instruction?: string;
+  }) {
+    const sourceUrl = assertPublicSourceUrl(input.url);
+    const created = await this.createProject({
+      name: input.name,
+      intent: "ONYX WEBY page URL to multi-scene promo video",
+      preferences: { source: "ONYX_WEBY", sourceType: "url" },
+    });
+    const projectId = created?.project?.id;
+    if (!projectId) throw new Error("HTML_VIDEO_PROJECT_ID_MISSING");
+
+    return this.sendMessage(
+      String(projectId),
+      [
+        input.instruction || "Create a concise launch/promo video from this page.",
+        "Preserve the source's real claims and brand language; do not invent metrics.",
+        "Aim for a clear hook → value → proof → CTA story and keep motion restrained.",
+        sourceUrl,
+      ].join("\n"),
+    );
+  }
+
+  async generateFromHtml(input: {
+    name: string;
+    html: string;
+    instruction?: string;
+    sourceLabel?: string;
+  }) {
+    const created = await this.createProject({
+      name: input.name,
+      intent: "ONYX WEBY HTML/component to multi-scene promo video",
+      preferences: { source: "ONYX_WEBY", sourceType: "html" },
+    });
+    const projectId = created?.project?.id;
+    if (!projectId) throw new Error("HTML_VIDEO_PROJECT_ID_MISSING");
+
+    await this.addTextAsset(
+      String(projectId),
+      input.html,
+      input.sourceLabel || "ONYX WEBY source HTML",
+    );
+
+    return this.sendMessage(
+      String(projectId),
+      [
+        input.instruction || "Create a concise 15-second launch/promo video from the attached ONYX WEBY source.",
+        "Use only claims that are supported by the attached source.",
+        "Create a multi-frame hook → value → proof → CTA story.",
+        "Keep brand hierarchy and motion restrained; prefer readable kinetic typography over decorative noise.",
+      ].join("\n"),
+    );
+  }
+
+  async exportProject(projectId: string) {
+    const baseUrl = this.requireBaseUrl();
+    return fetchJson(
+      `${baseUrl}/api/projects/${encodeURIComponent(projectId)}/export`,
       { method: "POST" },
       600000,
     );
   }
 }
+
