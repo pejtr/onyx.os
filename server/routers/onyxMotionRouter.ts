@@ -46,9 +46,9 @@ export const onyxMotionRouter = router({
       { id: "web.motion.preview", provider: "MOTION_ANYTHING", implemented: false, requiresExternalAdapter: true },
       { id: "web.motion.export", provider: "MOTION_ANYTHING", implemented: true, requiresExternalAdapter: true },
       { id: "web.motion.fromReference", provider: "MOTION_ANYTHING", implemented: false, requiresExternalAdapter: true },
-      { id: "web.video.fromPage", provider: "HTML_VIDEO", implemented: false, requiresExternalAdapter: true },
-      { id: "web.video.fromComponent", provider: "HTML_VIDEO", implemented: false, requiresExternalAdapter: true },
-      { id: "web.video.fromUrl", provider: "HTML_VIDEO", implemented: false, requiresExternalAdapter: true },
+      { id: "web.video.fromPage", provider: "HTML_VIDEO", implemented: true, requiresExternalAdapter: true },
+      { id: "web.video.fromComponent", provider: "HTML_VIDEO", implemented: true, requiresExternalAdapter: true },
+      { id: "web.video.fromUrl", provider: "HTML_VIDEO", implemented: true, requiresExternalAdapter: true },
       { id: "web.video.render", provider: "HTML_VIDEO", implemented: true, requiresExternalAdapter: true },
     ] as const;
   }),
@@ -198,6 +198,51 @@ export const onyxMotionRouter = router({
     .mutation(async ({ input }) => {
       const adapter = new MotionAnythingAdapter();
       return adapter.renderHtmlVideo(input);
+    }),
+
+  videoFromUrl: adminProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(120),
+        url: z.string().url().max(2048),
+        instruction: z.string().min(3).max(4000).optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const adapter = new HtmlVideoAdapter();
+      return adapter.generateFromUrl(input);
+    }),
+
+  videoFromPage: adminProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(120),
+        html: z.string().min(20).max(250_000),
+        instruction: z.string().min(3).max(4000).optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const adapter = new HtmlVideoAdapter();
+      return adapter.generateFromHtml({
+        ...input,
+        sourceLabel: "ONYX WEBY full page HTML",
+      });
+    }),
+
+  videoFromComponent: adminProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(120),
+        html: z.string().min(10).max(100_000),
+        instruction: z.string().min(3).max(4000).optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const adapter = new HtmlVideoAdapter();
+      return adapter.generateFromHtml({
+        ...input,
+        sourceLabel: "ONYX WEBY component HTML",
+      });
     }),
 
   createVideoProject: adminProcedure
