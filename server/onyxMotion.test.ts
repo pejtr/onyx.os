@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  HtmlVideoAdapter,
   MotionAnythingAdapter,
   exportMotionCss,
   planOnyxMotion,
@@ -95,4 +96,127 @@ describe("ONYX WEBY motion engine", () => {
     expect(status.reachable).toBe(true);
     expect(status.name).toBe("motion-anything");
   });
+  it("uses injected fetch for the motion-anything health probe", async () => {
+    const calls: string[] = [];
+    const fakeFetch = (async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return new Response(JSON.stringify({ projects: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    const adapter = new MotionAnythingAdapter("http://127.0.0.1:4399", fakeFetch);
+    const status = await adapter.status();
+
+    expect(status.configured).toBe(true);
+    expect(status.reachable).toBe(true);
+    expect(calls).toEqual(["http://127.0.0.1:4399/api/projects"]);
+  });
+
+  it("bridges a public page URL into an html-video project and waits for generation", async () => {
+    const calls: Array<{ url: string; method: string; body?: string }> = [];
+    const fakeFetch = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      const url = String(input);
+      const method = init.method ?? "GET";
+      calls.push({
+        url,
+        method,
+        body: typeof init.body === "string" ? init.body : undefined,
+      });
+
+      if (url.endsWith("/api/projects") && method === "POST") {
+        return new Response(JSON.stringify({ project: { id: "video-1" } }), { status: 200 });
+      }
+      if (url.endsWith("/api/projects/video-1/messages") && method === "POST") {
+        return new Response('data: {"type":"done"}\n\n', {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        });
+      }
+      if (url.endsWith("/api/projects/video-1") && method === "GET") {
+        return new Response(
+          JSON.stringify({ project: { id: "video-1", frames: [{ graphNodeId: "hook" }] } }),
+          { status: 200 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    const adapter = new HtmlVideoAdapter("http://127.0.0.1:3071", fakeFetch);
+    const result = await adapter.generateFromUrl({
+      name: "ONYX WEBY promo",
+      url: "https://example.com/product",
+      instruction: "Create a 15-second product promo.",
+    });
+
+    expect(result.project.id).toBe("video-1");
+    expect(calls.map((call) => [call.method, call.url])).toEqual([
+      ["POST", "http://127.0.0.1:3071/api/projects"],
+      ["POST", "http://127.0.0.1:3071/api/projects/video-1/messages"],
+      ["GET", "http://127.0.0.1:3071/api/projects/video-1"],
+    ]);
+
+    const message = calls[1]?.body ?? "";
+    expect(message).toContain("https://example.com/product");
+    expect(message).toContain("do not invent metrics");
+  });
+
+  it("blocks obvious private source URLs before html-video can fetch them", async () => {
+    let called = false;
+    const fakeFetch = (async () => {
+      called = true;
+      return new Response("unexpected", { status: 500 });
+    }) as typeof fetch;
+    const adapter = new HtmlVideoAdapter("http://127.0.0.1:3071", fakeFetch);
+
+    await expect(
+      adapter.generateFromUrl({
+        name: "blocked",
+        url: "http://127.0.0.1/internal",
+      }),
+    ).rejects.toThrow("PRIVATE_SOURCE_URL_BLOCKED");
+
+    expect(called).toBe(false);
+  });
+
+  it("attaches page HTML before asking html-video to generate a storyboard", async () => {
+    const calls: Array<{ url: string; method: string; body?: string }> = [];
+    const fakeFetch = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      const url = String(input);
+      const method = init.method ?? "GET";
+      calls.push({ url, method, body: typeof init.body === "string" ? init.body : undefined });
+
+      if (url.endsWith("/api/projects") && method === "POST") {
+        return new Response(JSON.stringify({ project: { id: "page-1" } }), { status: 200 });
+      }
+      if (url.endsWith("/api/projects/page-1/assets") && method === "POST") {
+        return new Response(JSON.stringify({ project: { id: "page-1" } }), { status: 200 });
+      }
+      if (url.endsWith("/api/projects/page-1/messages") && method === "POST") {
+        return new Response('data: {"type":"done"}\n\n', { status: 200 });
+      }
+      if (url.endsWith("/api/projects/page-1") && method === "GET") {
+        return new Response(JSON.stringify({ project: { id: "page-1", frames: [] } }), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    const adapter = new HtmlVideoAdapter("http://127.0.0.1:3071", fakeFetch);
+    await adapter.generateFromHtml({
+      name: "Page promo",
+      html: "<!doctype html><html><body><h1>Real product claim</h1></body></html>",
+      sourceLabel: "ONYX WEBY full page HTML",
+    });
+
+    expect(calls.map((call) => call.url)).toEqual([
+      "http://127.0.0.1:3071/api/projects",
+      "http://127.0.0.1:3071/api/projects/page-1/assets",
+      "http://127.0.0.1:3071/api/projects/page-1/messages",
+      "http://127.0.0.1:3071/api/projects/page-1",
+    ]);
+    expect(calls[1]?.body).toContain("Real product claim");
+    expect(calls[2]?.body).toContain("Use only claims that are supported");
+  });
+
 });
