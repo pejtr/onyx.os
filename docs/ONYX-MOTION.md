@@ -26,6 +26,8 @@ Neither upstream project becomes a new OS, cockpit, or source of tenant authorit
 
 The first capability is available from the local deterministic ONYX planner even when all external adapters are offline.
 
+Current POC truth: `web.motion.plan`, `web.motion.apply`, `web.motion.export`, and project-level `web.video.render` have implemented backend paths. Direct `web.motion.preview` and automatic page/component/URL → html-video storyboard ingestion remain explicitly **NOT IMPLEMENTED** until the next adapter slice.
+
 ## Restraint gates
 
 Every ONYX plan enforces the initial motion quality gates:
@@ -59,6 +61,8 @@ ONYX_HTML_VIDEO_URL=http://127.0.0.1:3071
 Do not expose these values as `VITE_*` variables and do not proxy the upstream studios directly to public clients.
 
 The tRPC router intentionally exposes only adapter health state, not the configured internal URL.
+
+All procedures that execute or mutate an external motion/video runtime are **admin-gated** in the POC. This prevents cross-user artifact access while ONYX does not yet have a durable tenant/ownership ledger for upstream artifact IDs. Local planning and CSS export remain available to authenticated users.
 
 ## motion-anything endpoints used
 
