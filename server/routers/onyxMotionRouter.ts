@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import {
   HtmlVideoAdapter,
   MotionAnythingAdapter,
@@ -131,7 +131,7 @@ export const onyxMotionRouter = router({
       };
     }),
 
-  suggest: protectedProcedure
+  suggest: adminProcedure
     .input(
       z.object({
         instruction: z.string().min(3).max(1500),
@@ -144,7 +144,7 @@ export const onyxMotionRouter = router({
       return adapter.suggest(input);
     }),
 
-  generateWebArtifact: protectedProcedure
+  generateWebArtifact: adminProcedure
     .input(
       z.object({
         brief: z.string().min(10).max(6000),
@@ -163,7 +163,7 @@ export const onyxMotionRouter = router({
       });
     }),
 
-  editWebArtifact: protectedProcedure
+  editWebArtifact: adminProcedure
     .input(
       z.object({
         slug: z.string().min(1).max(200),
@@ -186,7 +186,7 @@ export const onyxMotionRouter = router({
       });
     }),
 
-  renderWebArtifact: protectedProcedure
+  renderWebArtifact: adminProcedure
     .input(
       z.object({
         slug: z.string().min(1).max(200),
@@ -200,7 +200,7 @@ export const onyxMotionRouter = router({
       return adapter.renderHtmlVideo(input);
     }),
 
-  createVideoProject: protectedProcedure
+  createVideoProject: adminProcedure
     .input(
       z.object({
         name: z.string().min(1).max(120),
@@ -213,7 +213,7 @@ export const onyxMotionRouter = router({
       return adapter.createProject(input);
     }),
 
-  exportVideoProject: protectedProcedure
+  exportVideoProject: adminProcedure
     .input(z.object({ projectId: z.string().min(1).max(200) }))
     .mutation(async ({ input }) => {
       const adapter = new HtmlVideoAdapter();
