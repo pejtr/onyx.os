@@ -179,7 +179,7 @@ export function planOnyxMotion(input: {
     }
 
     const trigger: OnyxMotionTrigger = selected.trigger;
-    const isEntrance = trigger === "load" || trigger === "scroll";
+    const isEntrance = !selected.looping && (trigger === "load" || trigger === "scroll");
     const delayMs = isEntrance ? Math.min(240, entranceIndex++ * 60) : 0;
 
     if (isEntrance && entranceIndex > 3) {
@@ -211,7 +211,7 @@ export function planOnyxMotion(input: {
       reducedMotion: reducedMotionFor(effect),
       requiresRuntime:
         selected.requiresRuntime ||
-        ATTENTION_EFFECTS.has(effect) && effect !== "pop" && effect !== "pulse",
+        (ATTENTION_EFFECTS.has(effect) && effect !== "pop" && effect !== "pulse"),
       reason:
         component.kind === "cta"
           ? "Interactive feedback only; no autoplay attention grab."
