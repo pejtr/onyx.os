@@ -378,12 +378,17 @@ function normalizedBaseUrl(value?: string) {
 export class MotionAnythingAdapter {
   readonly name = "motion-anything" as const;
   readonly baseUrl: string | null;
+  private readonly fetchImpl: FetchLike;
 
-  constructor(baseUrl = process.env.ONYX_MOTION_ANYTHING_URL) {
+  constructor(
+    baseUrl = process.env.ONYX_MOTION_ANYTHING_URL,
+    fetchImpl: FetchLike = fetch,
+  ) {
     this.baseUrl = normalizedBaseUrl(baseUrl);
+    this.fetchImpl = fetchImpl;
   }
 
-  async status(fetchImpl?: FetchLike): Promise<OnyxMotionAdapterStatus> {
+  async status(fetchImpl: FetchLike = this.fetchImpl): Promise<OnyxMotionAdapterStatus> {
     if (!this.baseUrl) {
       return {
         name: this.name,
@@ -437,6 +442,7 @@ export class MotionAnythingAdapter {
         }),
       },
       125000,
+      this.fetchImpl,
     );
   }
 
@@ -455,6 +461,7 @@ export class MotionAnythingAdapter {
         body: JSON.stringify(input),
       },
       245000,
+      this.fetchImpl,
     );
   }
 
@@ -475,6 +482,7 @@ export class MotionAnythingAdapter {
         body: JSON.stringify(input),
       },
       245000,
+      this.fetchImpl,
     );
   }
 
@@ -493,6 +501,7 @@ export class MotionAnythingAdapter {
         body: JSON.stringify(input),
       },
       600000,
+      this.fetchImpl,
     );
   }
 }
@@ -500,9 +509,14 @@ export class MotionAnythingAdapter {
 export class HtmlVideoAdapter {
   readonly name = "html-video" as const;
   readonly baseUrl: string | null;
+  private readonly fetchImpl: FetchLike;
 
-  constructor(baseUrl = process.env.ONYX_HTML_VIDEO_URL) {
+  constructor(
+    baseUrl = process.env.ONYX_HTML_VIDEO_URL,
+    fetchImpl: FetchLike = fetch,
+  ) {
     this.baseUrl = normalizedBaseUrl(baseUrl);
+    this.fetchImpl = fetchImpl;
   }
 
   private requireBaseUrl() {
@@ -510,7 +524,7 @@ export class HtmlVideoAdapter {
     return this.baseUrl;
   }
 
-  async status(fetchImpl?: FetchLike): Promise<OnyxMotionAdapterStatus> {
+  async status(fetchImpl: FetchLike = this.fetchImpl): Promise<OnyxMotionAdapterStatus> {
     if (!this.baseUrl) {
       return {
         name: this.name,
@@ -558,6 +572,7 @@ export class HtmlVideoAdapter {
         body: JSON.stringify(input),
       },
       15000,
+      this.fetchImpl,
     );
   }
 
@@ -567,6 +582,7 @@ export class HtmlVideoAdapter {
       `${baseUrl}/api/projects/${encodeURIComponent(projectId)}`,
       { method: "GET" },
       15000,
+      this.fetchImpl,
     );
   }
 
@@ -580,6 +596,7 @@ export class HtmlVideoAdapter {
         body: JSON.stringify({ kind: "text", content, caption }),
       },
       30000,
+      this.fetchImpl,
     );
   }
 
@@ -596,6 +613,7 @@ export class HtmlVideoAdapter {
         body: JSON.stringify({ content }),
       },
       600000,
+      this.fetchImpl,
     );
     return this.getProject(projectId);
   }
@@ -662,6 +680,7 @@ export class HtmlVideoAdapter {
       `${baseUrl}/api/projects/${encodeURIComponent(projectId)}/export`,
       { method: "POST" },
       600000,
+      this.fetchImpl,
     );
   }
 }
