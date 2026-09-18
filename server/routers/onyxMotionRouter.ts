@@ -43,12 +43,12 @@ export const onyxMotionRouter = router({
     return [
       { id: "web.motion.plan", provider: "ONYX_LOCAL", implemented: true, requiresExternalAdapter: false },
       { id: "web.motion.apply", provider: "MOTION_ANYTHING", implemented: true, requiresExternalAdapter: true },
-      { id: "web.motion.preview", provider: "MOTION_ANYTHING", implemented: true, requiresExternalAdapter: true },
+      { id: "web.motion.preview", provider: "MOTION_ANYTHING", implemented: false, requiresExternalAdapter: true },
       { id: "web.motion.export", provider: "MOTION_ANYTHING", implemented: true, requiresExternalAdapter: true },
       { id: "web.motion.fromReference", provider: "MOTION_ANYTHING", implemented: false, requiresExternalAdapter: true },
-      { id: "web.video.fromPage", provider: "HTML_VIDEO", implemented: true, requiresExternalAdapter: true },
-      { id: "web.video.fromComponent", provider: "HTML_VIDEO", implemented: true, requiresExternalAdapter: true },
-      { id: "web.video.fromUrl", provider: "HTML_VIDEO", implemented: true, requiresExternalAdapter: true },
+      { id: "web.video.fromPage", provider: "HTML_VIDEO", implemented: false, requiresExternalAdapter: true },
+      { id: "web.video.fromComponent", provider: "HTML_VIDEO", implemented: false, requiresExternalAdapter: true },
+      { id: "web.video.fromUrl", provider: "HTML_VIDEO", implemented: false, requiresExternalAdapter: true },
       { id: "web.video.render", provider: "HTML_VIDEO", implemented: true, requiresExternalAdapter: true },
     ] as const;
   }),
