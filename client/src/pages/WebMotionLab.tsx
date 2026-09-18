@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import {
@@ -41,6 +42,9 @@ export default function WebMotionLab() {
     "Premium ONYX WEBY landing page hero. Keep motion restrained, make the primary CTA feel responsive, and animate one proof statistic on scroll.",
   );
   const [css, setCss] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoProjectId, setVideoProjectId] = useState("");
+  const [videoExportPath, setVideoExportPath] = useState("");
 
   const statusQuery = trpc.onyxMotion.status.useQuery(undefined, {
     refetchInterval: 30_000,
@@ -61,6 +65,24 @@ export default function WebMotionLab() {
   const generateMutation = trpc.onyxMotion.generateWebArtifact.useMutation({
     onSuccess: (result: any) => {
       toast.success(`motion-anything vytvořil artifact ${result?.slug ?? ""}`);
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const videoFromUrlMutation = trpc.onyxMotion.videoFromUrl.useMutation({
+    onSuccess: (result: any) => {
+      const id = String(result?.project?.id ?? "");
+      setVideoProjectId(id);
+      setVideoExportPath("");
+      toast.success(id ? `html-video projekt ${id} je připravený` : "html-video projekt vytvořen");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const videoExportMutation = trpc.onyxMotion.exportVideoProject.useMutation({
+    onSuccess: (result: any) => {
+      setVideoExportPath(String(result?.output_path ?? ""));
+      toast.success("MP4 export dokončen");
     },
     onError: (error) => toast.error(error.message),
   });
@@ -94,6 +116,27 @@ export default function WebMotionLab() {
       return;
     }
     generateMutation.mutate({ brief, profile });
+  };
+
+  const generateVideoFromUrl = () => {
+    if (!videoAdapter?.reachable) {
+      toast.error("html-video adapter není připojen. Nastav ONYX_HTML_VIDEO_URL.");
+      return;
+    }
+    if (!videoUrl.trim()) {
+      toast.error("Zadej veřejnou URL stránky.");
+      return;
+    }
+    videoFromUrlMutation.mutate({
+      name: "ONYX WEBY promo",
+      url: videoUrl.trim(),
+      instruction: "Create a concise 15-second promo suitable for 16:9 and later 9:16 adaptation.",
+    });
+  };
+
+  const exportVideo = () => {
+    if (!videoProjectId) return;
+    videoExportMutation.mutate({ projectId: videoProjectId });
   };
 
   return (
@@ -317,9 +360,60 @@ export default function WebMotionLab() {
             <div className="rounded-2xl border border-border bg-card p-5">
               <div className="flex items-center gap-2 font-semibold">
                 <Film className="h-4 w-4 text-sky-400" />
-                Video routing
+                Page → promo video
               </div>
-              <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-xs text-muted-foreground">
+                Admin-gated POC. html-video reads the public source, grounds the storyboard in its real
+                content and creates a multi-scene project. ONYX never invents source metrics.
+              </p>
+
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={videoUrl}
+                  onChange={(event) => setVideoUrl(event.target.value)}
+                  placeholder="https://example.com/landing-page"
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  onClick={generateVideoFromUrl}
+                  disabled={videoFromUrlMutation.isPending || !videoAdapter?.reachable}
+                >
+                  {videoFromUrlMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Clapperboard className="mr-2 h-4 w-4" />
+                  )}
+                  Create video
+                </Button>
+              </div>
+
+              {videoProjectId && (
+                <div className="mt-4 rounded-xl border border-border/60 bg-background/50 p-4">
+                  <div className="text-xs text-muted-foreground">html-video project</div>
+                  <code className="mt-1 block text-sm text-sky-300">{videoProjectId}</code>
+                  <Button
+                    className="mt-3"
+                    size="sm"
+                    onClick={exportVideo}
+                    disabled={videoExportMutation.isPending}
+                  >
+                    {videoExportMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Film className="mr-2 h-4 w-4" />
+                    )}
+                    Export MP4
+                  </Button>
+                  {videoExportPath && (
+                    <div className="mt-3 text-xs text-emerald-300">
+                      Export: <code>{videoExportPath}</code>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-4 grid gap-2 border-t border-border/60 pt-4 text-sm text-muted-foreground">
                 <div>Live page motion → motion-anything</div>
                 <div>Simple HTML artifact MP4 → HyperFrames</div>
                 <div>Multi-scene promo / Reel → html-video</div>
