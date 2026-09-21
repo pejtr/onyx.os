@@ -19,7 +19,7 @@ export type FileContent = {
   type: "file_url";
   file_url: {
     url: string;
-    mime_type?: "audio/mpeg" | "audio/wav" | "application/pdf" | "audio/mp4" | "video/mp4" ;
+    mime_type?: "audio/mpeg" | "audio/wav" | "application/pdf" | "audio/mp4" | "video/mp4";
   };
 };
 
@@ -62,6 +62,8 @@ export type InvokeParams = {
   tool_choice?: ToolChoice;
   maxTokens?: number;
   max_tokens?: number;
+  model?: string;
+  thinkingBudgetTokens?: number;
   outputSchema?: OutputSchema;
   output_schema?: OutputSchema;
   responseFormat?: ResponseFormat;
@@ -121,17 +123,9 @@ const normalizeContentPart = (
     return { type: "text", text: part };
   }
 
-  if (part.type === "text") {
-    return part;
-  }
-
-  if (part.type === "image_url") {
-    return part;
-  }
-
-  if (part.type === "file_url") {
-    return part;
-  }
+  if (part.type === "text") return part;
+  if (part.type === "image_url") return part;
+  if (part.type === "file_url") return part;
 
   throw new Error("Unsupported message content part");
 };
@@ -154,7 +148,6 @@ const normalizeMessage = (message: Message) => {
 
   const contentParts = ensureArray(message.content).map(normalizeContentPart);
 
-  // If there's only text content, collapse to a single string for compatibility
   if (contentParts.length === 1 && contentParts[0].type === "text") {
     return {
       role,
@@ -273,6 +266,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     tools,
     toolChoice,
     tool_choice,
+    maxTokens,
+    max_tokens,
+    model,
+    thinkingBudgetTokens,
     outputSchema,
     output_schema,
     responseFormat,
@@ -280,7 +277,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } = params;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: model?.trim() || "gemini-2.5-flash",
     messages: messages.map(normalizeMessage),
   };
 
@@ -296,10 +293,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
+  payload.max_tokens = maxTokens ?? max_tokens ?? 32768;
   payload.thinking = {
-    "budget_tokens": 128
-  }
+    budget_tokens: Math.max(0, thinkingBudgetTokens ?? 128),
+  };
 
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,
