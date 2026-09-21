@@ -72,35 +72,35 @@ export default function Integrations() {
   const [, navigate] = useLocation();
 
   const utils = trpc.useUtils();
-  const { data: configs = [], isLoading } = trpc.integrations.list.useQuery();
-  const { data: logs = [] } = trpc.integrations.logs.useQuery({ limit: 50 });
+  const { data: configs = [], isLoading } = trpc.webhookIntegrations.list.useQuery();
+  const { data: logs = [] } = trpc.webhookIntegrations.logs.useQuery({ limit: 50 });
 
-  const createMutation = trpc.integrations.create.useMutation({
+  const createMutation = trpc.webhookIntegrations.create.useMutation({
     onSuccess: () => {
       toast.success("Integrace úspěšně vytvořena");
       setCreateOpen(false);
       setForm({ ...defaultForm });
-      utils.integrations.list.invalidate();
+      utils.webhookIntegrations.list.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const deleteMutation = trpc.integrations.delete.useMutation({
+  const deleteMutation = trpc.webhookIntegrations.delete.useMutation({
     onSuccess: () => {
       toast.success("Integrace smazána");
-      utils.integrations.list.invalidate();
+      utils.webhookIntegrations.list.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const toggleMutation = trpc.integrations.update.useMutation({
+  const toggleMutation = trpc.webhookIntegrations.update.useMutation({
     onSuccess: () => {
-      utils.integrations.list.invalidate();
+      utils.webhookIntegrations.list.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const testMutation = trpc.integrations.test.useMutation({
+  const testMutation = trpc.webhookIntegrations.test.useMutation({
     onSuccess: (result) => {
       if (result.success) {
         toast.success("Test webhooku úspěšný! ✅");
@@ -108,7 +108,7 @@ export default function Integrations() {
         toast.error(`Test selhal: HTTP ${result.status} — ${result.error || result.body}`);
       }
       setTestingId(null);
-      utils.integrations.logs.invalidate();
+      utils.webhookIntegrations.logs.invalidate();
     },
     onError: (err) => {
       toast.error(err.message);
