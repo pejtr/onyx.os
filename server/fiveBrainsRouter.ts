@@ -89,6 +89,7 @@ async function callExpert(
       : expert.systemPrompt;
 
     const result = await invokeLLM({
+      mode: "expert",
       messages: [
         { role: "system", content: systemContent },
         {
@@ -116,6 +117,7 @@ async function synthesizeMasterReport(
 
   try {
     const result = await invokeLLM({
+      mode: "expert",
       messages: [
         {
           role: "system",
@@ -163,6 +165,7 @@ async function runConfidenceCheck(
     const [advocateRaw, skepticRaw] = await Promise.all([
       // Advocate — finds strengths, confirms validity
       invokeLLM({
+        mode: "expert",
         messages: [
           {
             role: "system",
@@ -196,6 +199,7 @@ Score 80-100 = velmi solidní analýza, 60-79 = dobrá s drobnými mezerami, 40-
       }),
       // Skeptic — finds weaknesses, challenges assumptions
       invokeLLM({
+        mode: "expert",
         messages: [
           {
             role: "system",
