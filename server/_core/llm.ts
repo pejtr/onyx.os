@@ -1,4 +1,5 @@
 import { ENV } from "./env";
+import { resolveModelPlan } from "../modelRouter";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -57,6 +58,9 @@ export type ToolChoice =
 
 export type InvokeParams = {
   messages: Message[];
+  model?: string;
+  mode?: "fast" | "expert";
+  thinkingBudget?: number;
   tools?: Tool[];
   toolChoice?: ToolChoice;
   tool_choice?: ToolChoice;
@@ -279,8 +283,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
+  const modelPlan = resolveModelPlan({ mode: params.mode ?? "fast" });
+
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: params.model?.trim() || modelPlan.primaryModel,
     messages: messages.map(normalizeMessage),
   };
 
@@ -296,10 +302,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
+  payload.max_tokens = params.maxTokens ?? params.max_tokens ?? 32768;
   payload.thinking = {
-    "budget_tokens": 128
-  }
+    budget_tokens: params.thinkingBudget ?? (params.mode === "expert" ? 512 : 128),
+  };
 
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,
