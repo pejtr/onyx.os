@@ -26,6 +26,7 @@
  */
 
 import { invokeLLM } from "./_core/llm";
+import { invokeRoutedLLM } from "./ai/modelRouter";
 import { getConstitutionContext } from "./routers/constitution";
 
 // ─── HERMES Identity ─────────────────────────────────────────────────────────
@@ -93,7 +94,7 @@ export async function classifyIntent(
   userMessage: string,
   conversationHistory: Array<{ role: string; content: string }>
 ): Promise<IntentClassification> {
-  const result = await invokeLLM({
+  const routed = await invokeRoutedLLM({
     messages: [
       {
         role: "system",
@@ -130,11 +131,11 @@ Respond with JSON only.`,
         additionalProperties: false,
       },
     }},
-  });
+  }, { mode: "FAST", task: "classification" });
 
   try {
-    const raw = result.choices[0].message.content ?? "{}";
-    return JSON.parse(raw) as IntentClassification;
+    const raw = routed.primary.choices[0].message.content ?? "{}";
+    return JSON.parse(typeof raw === "string" ? raw : "{}") as IntentClassification;
   } catch {
     return {
       intent: "general",
@@ -346,9 +347,17 @@ You are currently operating as HERMES channeling the ${agentPersona.name} sub-ag
     { role: "user", content: userMessage },
   ];
 
-  // 7. Invoke LLM
-  const response = await invokeLLM({ messages });
-  const content = response.choices[0].message.content ?? "HERMES is processing your request. Please try again.";
+  // 7. Invoke LLM through ONYX Model Router
+  const routedResponse = await invokeRoutedLLM(
+    { messages },
+    { mode: "EXPERT", task: "chat" }
+  );
+  const rawContent = routedResponse.primary.choices[0].message.content;
+  const content =
+    typeof rawContent === "string"
+      ? rawContent
+      : "HERMES is processing your request. Please try again.";
+  routingDecision = `${routingDecision} via ${routedResponse.plan.primary.model}`;
 
   // 8. Suggest a mission if appropriate
   let suggestedMission: MissionTemplate | undefined;

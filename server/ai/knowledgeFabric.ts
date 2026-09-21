@@ -5,8 +5,8 @@ function tokens(value: string): Set<string> {
     value
       .toLocaleLowerCase("cs-CZ")
       .normalize("NFKD")
-      .replace(/[^\\p{L}\\p{N}]+/gu, " ")
-      .split(/\\s+/)
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .split(/\s+/)
       .filter((token) => token.length >= 2)
   );
 }
@@ -33,12 +33,16 @@ export function rankKnowledgeChunks(
       }
 
       const coverage = overlap / queryTokens.size;
+      if (coverage === 0) {
+        return { chunk, score: 0 };
+      }
+
       const trustBoost =
         chunk.trust === "trusted" ? 0.08 : chunk.trust === "untrusted" ? -0.08 : 0;
 
       return {
         chunk,
-        score: Math.max(0, coverage + trustBoost),
+        score: Math.max(0.001, coverage + trustBoost),
       };
     })
     .filter((entry) => entry.score > 0)
@@ -79,9 +83,9 @@ export function buildEvidenceContext(
   const context = ranked
     .map(
       ({ chunk }, index) =>
-        `[EVIDENCE ${index + 1} | source=${chunk.provenance.sourceId} | document=${chunk.provenance.documentId} | chunk=${chunk.provenance.chunkId} | trust=${chunk.trust}]\\n${chunk.text}\\n[/EVIDENCE ${index + 1}]`
+        `[EVIDENCE ${index + 1} | source=${chunk.provenance.sourceId} | document=${chunk.provenance.documentId} | chunk=${chunk.provenance.chunkId} | trust=${chunk.trust}]\n${chunk.text}\n[/EVIDENCE ${index + 1}]`
     )
-    .join("\\n\\n");
+    .join("\n\n");
 
   return { context, evidence };
 }

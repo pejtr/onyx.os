@@ -128,6 +128,7 @@ import { affiliateRouter } from "./routers/affiliateRouter";
 import { googleMapsRouter } from "./routers/googleMapsRouter";
 import { webAuditRouter } from "./routers/webAuditRouter";
 import { aresRouter } from "./routers/ares";
+import { aiFabricRouter } from "./routers/aiFabric";
 import {
   createTrackingPixel, getTrackingPixelsByUser, deleteTrackingPixel, updateTrackingPixel,
   getVisitorSessionsByPixel, getVisitorSessionsByUser, createVisitorSession,
@@ -2832,5 +2833,6 @@ Baseline by stage: new=10%, qualified=25%, presentation=40%, proposal=60%, negot
   googleMaps: googleMapsRouter,
   webAudit: webAuditRouter,
   ares: aresRouter,
+  aiFabric: aiFabricRouter,
 });
 export type AppRouter = typeof appRouter;

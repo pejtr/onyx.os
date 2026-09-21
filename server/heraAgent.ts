@@ -11,6 +11,7 @@
  */
 
 import { invokeLLM } from "./_core/llm";
+import { invokeRoutedLLM } from "./ai/modelRouter";
 import { AI_PERSONAS, getPersonaById, type AiPersona } from "./aiPersonas";
 
 // ─── Marketing intents ─────────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ export async function classifyMarketingIntent(
   conversationHistory: Array<{ role: string; content: string }>
 ): Promise<HeraClassification> {
   try {
-    const result = await invokeLLM({
+    const routed = await invokeRoutedLLM({
       messages: [
         {
           role: "system",
@@ -106,9 +107,9 @@ Respond with JSON only.`,
           },
         },
       },
-    });
+    }, { mode: "FAST", task: "classification" });
 
-    const raw = result.choices[0].message.content;
+    const raw = routed.primary.choices[0].message.content;
     const parsed = JSON.parse(typeof raw === "string" ? raw : "{}") as HeraClassification;
     if (!HERA_INTENTS.includes(parsed.intent)) {
       return { intent: "general_marketing", confidence: 0.5, reasoning: "Unknown intent — fallback" };
@@ -151,22 +152,22 @@ export async function heraChat(input: HeraChatInput): Promise<HeraChatOutput> {
     ? heraFrame + coach.systemPrompt(input.platformContext)
     : heraFrame + `You are a senior B2B marketing coach.\n${input.platformContext}`;
 
-  const response = await invokeLLM({
+  const routedResponse = await invokeRoutedLLM({
     messages: [
       { role: "system", content: systemPrompt },
       ...toLlmHistory(input.conversationHistory, 10),
       { role: "user", content: input.userMessage },
     ],
-  });
+  }, { mode: "EXPERT", task: "chat" });
 
-  const raw = response.choices[0].message.content;
+  const raw = routedResponse.primary.choices[0].message.content;
   const content = typeof raw === "string" && raw.length > 0 ? raw : "Omlouvám se, zkuste to prosím znovu.";
 
   return {
     content,
     intent: classification.intent,
     coachId: coach?.id ?? "alex_hormozi",
-    routingDecision: `HERA → ${coach?.name ?? "coach"} (${classification.intent}, confidence ${classification.confidence.toFixed(2)})`,
+    routingDecision: `HERA → ${coach?.name ?? "coach"} (${classification.intent}, confidence ${classification.confidence.toFixed(2)}) via ${routedResponse.plan.primary.model}`,
     activeCoach: coach ? { name: coach.name, emoji: coach.emoji, color: coach.color } : null,
   };
 }

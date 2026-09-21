@@ -17,14 +17,14 @@ type ModelEnvironment = Pick<
   "ONYX_DEFAULT_MODEL" | "ONYX_FAST_MODEL" | "ONYX_EXPERT_MODEL" | "ONYX_SECONDARY_MODEL"
 >;
 
-function configuredModel(value: string | undefined, fallback: string): {
-  model: string;
-  source: ModelRouteTarget["source"];
-} {
+function configuredModel(
+  value: string | undefined,
+  fallback: { model: string; source: ModelRouteTarget["source"] }
+): { model: string; source: ModelRouteTarget["source"] } {
   const trimmed = value?.trim();
   return trimmed
     ? { model: trimmed, source: "environment" }
-    : { model: fallback, source: "default" };
+    : fallback;
 }
 
 export function resolveModelPlan(
@@ -32,9 +32,12 @@ export function resolveModelPlan(
   task: OnyxAiTask,
   env: ModelEnvironment = process.env
 ): ModelRoutePlan {
-  const defaultTarget = configuredModel(env.ONYX_DEFAULT_MODEL, DEFAULT_MODEL);
-  const fast = configuredModel(env.ONYX_FAST_MODEL, defaultTarget.model);
-  const expert = configuredModel(env.ONYX_EXPERT_MODEL, defaultTarget.model);
+  const defaultTarget = configuredModel(env.ONYX_DEFAULT_MODEL, {
+    model: DEFAULT_MODEL,
+    source: "default",
+  });
+  const fast = configuredModel(env.ONYX_FAST_MODEL, defaultTarget);
+  const expert = configuredModel(env.ONYX_EXPERT_MODEL, defaultTarget);
 
   const primaryConfig = mode === "FAST" ? fast : expert;
   const primary: ModelRouteTarget = {
