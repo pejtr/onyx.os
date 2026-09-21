@@ -701,7 +701,7 @@ export const appRouter = router({
   }),
 
   // ── Integrations (Webhooks, ClickUp, Slack) ──────────────────────
-  integrations: router({
+  webhookIntegrations: router({
     // List all webhook configs for user
     list: protectedProcedure.query(async ({ ctx }) => {
       return getWebhookConfigs(ctx.user.id);
