@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getKnowledgeArticles } from "../db";
+import { fetchGitHubEvidenceFile } from "../ai/connectors/githubEvidence";
 import { evaluateGovernedAction } from "../ai/governedExecution";
 import { buildEvidenceContext } from "../ai/knowledgeFabric";
 import { resolveModelPlan } from "../ai/modelRouter";
@@ -127,5 +128,42 @@ export const aiFabricRouter = router({
       }));
 
       return buildEvidenceContext(input.query, chunks, input.limit);
+    }),
+
+  githubEvidence: adminProcedure
+    .input(
+      z.object({
+        owner: z.string().min(1).max(100),
+        repo: z.string().min(1).max(100),
+        path: z.string().min(1).max(1_024),
+        ref: z.string().min(1).max(256).default("main"),
+        query: z.string().min(1).max(4_000),
+        limit: z.number().int().min(1).max(20).default(8),
+      })
+    )
+    .query(async ({ input }) => {
+      const source = await fetchGitHubEvidenceFile({
+        owner: input.owner,
+        repo: input.repo,
+        path: input.path,
+        ref: input.ref,
+      });
+      const evidence = buildEvidenceContext(
+        input.query,
+        source.chunks,
+        input.limit
+      );
+
+      return {
+        source: {
+          repoKey: source.repoKey,
+          path: source.path,
+          ref: source.ref,
+          trust: source.trust,
+          authenticated: source.authenticated,
+          chunkCount: source.chunks.length,
+        },
+        ...evidence,
+      };
     }),
 });

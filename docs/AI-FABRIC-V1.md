@@ -106,7 +106,29 @@ The evidence pack uses explicit boundaries:
 [/EVIDENCE 1]
 ```
 
-This is the first step toward GitHub / Drive / Notion / Gmail / file provenance without collapsing all knowledge into an untraceable prompt.
+The first external provenance adapter is now GitHub read-only evidence. Drive / Notion / Gmail / file adapters remain follow-up work.
+
+### GitHub evidence adapter
+
+File: `server/ai/connectors/githubEvidence.ts`
+
+Security model:
+
+- public repository files may be read without credentials,
+- `ONYX_GITHUB_READ_TOKEN` is server-only,
+- the token is sent only when the exact `owner/repo` is present in `ONYX_GITHUB_ALLOWED_REPOS`,
+- trust is independent and requires the exact repo in `ONYX_GITHUB_TRUSTED_REPOS`,
+- repository owner/name, ref and path are normalized and path traversal is rejected,
+- requests are pinned to `api.github.com`, use GET only, have timeout and byte limits,
+- the tRPC endpoint using server credentials is admin-only.
+
+Configuration:
+
+- `ONYX_GITHUB_READ_TOKEN`
+- `ONYX_GITHUB_ALLOWED_REPOS=owner/repo,owner/other-repo`
+- `ONYX_GITHUB_TRUSTED_REPOS=owner/repo`
+
+A live unauthenticated smoke test against `pejtr/onyx.os/README.md` produced provenance chunks successfully.
 
 ## 3. Governed Execution
 
@@ -160,20 +182,23 @@ Protected endpoints:
 - `aiFabric.knowledgePreview`
 - `aiFabric.knowledgeSearch`
 
-All endpoints in v1 are read-only / pure computation.
+Admin-only external evidence endpoint:
+
+- `aiFabric.githubEvidence`
+
+All endpoints in v1 are read-only. The GitHub endpoint may use a server credential only for an explicitly allowlisted repository.
 
 ## Next integrations
 
 P0 follow-up:
 
-1. GitHub evidence adapter.
-2. Google Drive / Docs evidence adapter.
-3. Notion evidence adapter.
-4. Gmail evidence adapter for explicitly scoped project knowledge.
-5. Prompt-injection treatment for untrusted retrieved documents.
-6. Persisted model-route telemetry and cost/latency measurements.
-7. OMNI PROFIT adapter for LEADOS opportunities.
-8. Governed action envelope around existing write-capable integrations.
+1. Google Drive / Docs evidence adapter.
+2. Notion evidence adapter.
+3. Gmail evidence adapter for explicitly scoped project knowledge.
+4. Prompt-injection treatment for untrusted retrieved documents.
+5. Persisted model-route telemetry and cost/latency measurements.
+6. OMNI PROFIT adapter for LEADOS opportunities.
+7. Governed action envelope around existing write-capable integrations.
 
 P1:
 

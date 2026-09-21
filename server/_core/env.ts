@@ -7,6 +7,9 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  githubReadToken: process.env.ONYX_GITHUB_READ_TOKEN ?? "",
+  githubAllowedRepos: process.env.ONYX_GITHUB_ALLOWED_REPOS ?? "",
+  githubTrustedRepos: process.env.ONYX_GITHUB_TRUSTED_REPOS ?? "",
   // Dev-only: set DEV_AUTO_LOGIN=true to bypass Manus OAuth in local development
   devAutoLogin: process.env.DEV_AUTO_LOGIN === "true",
 };

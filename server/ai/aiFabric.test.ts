@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { KnowledgeChunk, ProfitOpportunity } from "../../shared/aiFabric";
+import {
+  chunkGitHubText,
+  normalizeGitHubPath,
+  resolveGitHubRepoAccess,
+} from "./connectors/githubEvidence";
 import { evaluateGovernedAction } from "./governedExecution";
 import { buildEvidenceContext, rankKnowledgeChunks } from "./knowledgeFabric";
 import { resolveModelPlan } from "./modelRouter";
@@ -49,6 +54,56 @@ describe("ONYX Model Router", () => {
       "fast-model",
       "secondary-model",
     ]);
+  });
+});
+
+describe("GitHub Knowledge connector policy", () => {
+  it("never sends the server token to a repo outside the explicit allowlist", () => {
+    const access = resolveGitHubRepoAccess("pejtr", "public-repo", {
+      token: "server-secret",
+      allowedRepos: new Set(["pejtr/private-repo"]),
+      trustedRepos: new Set(),
+    });
+
+    expect(access.useToken).toBe(false);
+    expect(access.trust).toBe("unknown");
+  });
+
+  it("uses the token only for an allowed repo and marks trust independently", () => {
+    const access = resolveGitHubRepoAccess("Pejtr", "ONYX.OS", {
+      token: "server-secret",
+      allowedRepos: new Set(["pejtr/onyx.os"]),
+      trustedRepos: new Set(["pejtr/onyx.os"]),
+    });
+
+    expect(access.repoKey).toBe("pejtr/onyx.os");
+    expect(access.useToken).toBe(true);
+    expect(access.trust).toBe("trusted");
+  });
+
+  it("rejects path traversal and normalizes ordinary repository paths", () => {
+    expect(() => normalizeGitHubPath("../secret.txt")).toThrow(
+      "Invalid GitHub path"
+    );
+    expect(normalizeGitHubPath("/docs/architecture.md")).toBe(
+      "docs/architecture.md"
+    );
+  });
+
+  it("chunks large text with bounded overlap", () => {
+    const text = Array.from(
+      { length: 120 },
+      (_, index) => `line-${index.toString().padStart(3, "0")} ${"x".repeat(20)}`
+    ).join("\n");
+
+    const chunks = chunkGitHubText(text, {
+      maxChars: 700,
+      overlap: 100,
+    });
+
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every((chunk) => chunk.text.length <= 700)).toBe(true);
+    expect(chunks[1].start).toBeLessThan(chunks[0].end);
   });
 });
 
