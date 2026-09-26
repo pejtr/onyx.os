@@ -37,6 +37,23 @@ Provides:
 
 This is intentionally a foundation, not a claim of full vector RAG. Future providers can add embeddings/vector retrieval behind the same contracts.
 
+#### GitHub Evidence connector
+
+The first real Knowledge Fabric connector is a read-only GitHub evidence adapter.
+
+Configuration:
+- `ONYX_GITHUB_READ_TOKEN` — optional server-side read token
+- `ONYX_GITHUB_ALLOWED_REPOS` — comma-separated repositories allowed to receive that token
+- `ONYX_GITHUB_TRUSTED_REPOS` — comma-separated repositories whose evidence is marked trusted
+
+Security invariants:
+- the token is never sent to repositories outside the explicit allowlist
+- public repositories can still be read anonymously
+- repository owner/name, ref and file path are normalized and traversal is rejected
+- reads are fixed to `api.github.com`, bounded by timeout and byte limits, and redirects are denied
+- the tRPC surface is admin-only and read-only
+- returned chunks use the canonical `KnowledgeChunk` provenance contract
+
 ### 3. Governed Execution
 
 Default policy:
@@ -66,7 +83,7 @@ The scorer is deterministic and AI-independent so rankings can be audited.
 ## Next slices
 
 1. Knowledge connectors:
-   - GitHub
+   - GitHub — implemented read-only v1
    - Google Drive
    - Notion
    - Gmail
