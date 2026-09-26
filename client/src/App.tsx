@@ -70,6 +70,7 @@ import GoogleMapsScraper from "./pages/GoogleMapsScraper";
 import WebAudit from "./pages/WebAudit";
 import Sluzby from "./pages/Sluzby";
 import AresSearch from "./pages/AresSearch";
+import WebMotionLab from "./pages/WebMotionLab";
 
 function ScrollToTop() {
   const [location] = useLocation();
@@ -148,6 +149,7 @@ function Router() {
       <Route path="/web-audit" component={WebAudit} />
       <Route path="/sluzby" component={Sluzby} />
       <Route path="/ares" component={AresSearch} />
+      <Route path="/web-motion" component={WebMotionLab} />
       <Route path="*" component={NotFound} />
     </Switch>
   );
