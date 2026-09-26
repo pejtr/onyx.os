@@ -1,5 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 
+await mkdir("/data/projects", { recursive: true });
+
 const key = process.env.MOTION_BYOK_API_KEY?.trim() ?? "";
 if (!key) {
   process.stdout.write("[onyx-runtime] motion BYOK key not configured; generation capability is not ready.\n");
