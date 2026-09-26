@@ -33,7 +33,7 @@ ENV NODE_ENV=production \
     UPSTREAM_PORT=3071 \
     UPSTREAM_HEALTH_PATH=/api/projects \
     SERVICE_NAME=html-video \
-    UPSTREAM_CMD="node /opt/html-video/packages/cli/dist/bin.js --cwd /data/html-video studio --port 3071"
+    UPSTREAM_CMD="mkdir -p /data/html-video && node /opt/html-video/packages/cli/dist/bin.js --cwd /data/html-video studio --port 3071"
 
 VOLUME ["/data"]
 EXPOSE 8080
