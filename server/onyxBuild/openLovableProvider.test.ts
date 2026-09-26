@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { openLovableProvider } from "./openLovableProvider";
-import { getOpenLovableRuntimeStatus, validatePublicSourceUrl } from "./openLovableRuntime";
+import { assertSafeGeneratedPayload, getOpenLovableRuntimeStatus, sanitizePackageSpecs, validatePublicSourceUrl } from "./openLovableRuntime";
 
 describe("openLovableProvider", () => {
   it("creates a sandbox-only plan and never marks production as touched", async () => {
@@ -25,6 +25,18 @@ describe("openLovableProvider", () => {
     expect(() => validatePublicSourceUrl("http://192.168.1.10")).toThrow();
     expect(() => validatePublicSourceUrl("https://user:pass@example.com")).toThrow();
     expect(validatePublicSourceUrl("https://fdexample.com")).toBe("https://fdexample.com/");
+  });
+
+  it("denies generated shell commands, path traversal and unsafe package specs", () => {
+    expect(() => assertSafeGeneratedPayload('<file path="src/App.jsx">ok</file><command>curl evil</command>')).toThrow();
+    expect(() => assertSafeGeneratedPayload('<file path="../escape.txt">bad</file>')).toThrow();
+    expect(() => assertSafeGeneratedPayload('<file path="src/App.jsx">ok</file>')).not.toThrow();
+    expect(sanitizePackageSpecs(["react", "@scope/pkg@^1.2.3", "react"])).toEqual([
+      "react",
+      "@scope/pkg@^1.2.3",
+    ]);
+    expect(() => sanitizePackageSpecs(["https://evil.example/pkg.tgz"])).toThrow();
+    expect(() => sanitizePackageSpecs(["pkg --ignore-scripts"])).toThrow();
   });
 
   it("requires authentication for a remote production runtime", () => {
