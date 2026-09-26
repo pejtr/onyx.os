@@ -304,11 +304,19 @@ async function fetchJson(
   init: RequestInit,
   timeoutMs: number,
   fetchImpl: FetchLike = fetch,
+  token?: string | null,
 ) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(url, { ...init, redirect: "error", signal: controller.signal });
+    const headers = new Headers(init.headers);
+    if (token) headers.set("authorization", `Bearer ${token}`);
+    const response = await fetchImpl(url, {
+      ...init,
+      headers,
+      redirect: "error",
+      signal: controller.signal,
+    });
     const text = await response.text();
     let body: unknown = null;
     try {
@@ -330,11 +338,19 @@ async function fetchText(
   init: RequestInit,
   timeoutMs: number,
   fetchImpl: FetchLike = fetch,
+  token?: string | null,
 ) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(url, { ...init, redirect: "error", signal: controller.signal });
+    const headers = new Headers(init.headers);
+    if (token) headers.set("authorization", `Bearer ${token}`);
+    const response = await fetchImpl(url, {
+      ...init,
+      headers,
+      redirect: "error",
+      signal: controller.signal,
+    });
     const body = await response.text();
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${body.slice(0, 500)}`);
@@ -397,13 +413,16 @@ export class MotionAnythingAdapter {
   readonly name = "motion-anything" as const;
   readonly baseUrl: string | null;
   private readonly fetchImpl: FetchLike;
+  private readonly token: string | null;
 
   constructor(
     baseUrl = process.env.ONYX_MOTION_ANYTHING_URL,
     fetchImpl: FetchLike = fetch,
+    token = process.env.ONYX_MOTION_ANYTHING_TOKEN,
   ) {
     this.baseUrl = normalizedBaseUrl(baseUrl);
     this.fetchImpl = fetchImpl;
+    this.token = token?.trim() || null;
   }
 
   async status(fetchImpl: FetchLike = this.fetchImpl): Promise<OnyxMotionAdapterStatus> {
@@ -421,6 +440,7 @@ export class MotionAnythingAdapter {
         { method: "GET" },
         2500,
         fetchImpl,
+        this.token,
       );
       return {
         name: this.name,
@@ -461,6 +481,7 @@ export class MotionAnythingAdapter {
       },
       125000,
       this.fetchImpl,
+      this.token,
     );
   }
 
@@ -480,6 +501,7 @@ export class MotionAnythingAdapter {
       },
       245000,
       this.fetchImpl,
+      this.token,
     );
   }
 
@@ -501,6 +523,7 @@ export class MotionAnythingAdapter {
       },
       245000,
       this.fetchImpl,
+      this.token,
     );
   }
 
@@ -520,6 +543,7 @@ export class MotionAnythingAdapter {
       },
       600000,
       this.fetchImpl,
+      this.token,
     );
   }
 }
@@ -528,13 +552,16 @@ export class HtmlVideoAdapter {
   readonly name = "html-video" as const;
   readonly baseUrl: string | null;
   private readonly fetchImpl: FetchLike;
+  private readonly token: string | null;
 
   constructor(
     baseUrl = process.env.ONYX_HTML_VIDEO_URL,
     fetchImpl: FetchLike = fetch,
+    token = process.env.ONYX_HTML_VIDEO_TOKEN,
   ) {
     this.baseUrl = normalizedBaseUrl(baseUrl);
     this.fetchImpl = fetchImpl;
+    this.token = token?.trim() || null;
   }
 
   private requireBaseUrl() {
@@ -557,6 +584,7 @@ export class HtmlVideoAdapter {
         { method: "GET" },
         2500,
         fetchImpl,
+        this.token,
       );
       return {
         name: this.name,
@@ -591,6 +619,7 @@ export class HtmlVideoAdapter {
       },
       15000,
       this.fetchImpl,
+      this.token,
     );
   }
 
@@ -601,6 +630,7 @@ export class HtmlVideoAdapter {
       { method: "GET" },
       15000,
       this.fetchImpl,
+      this.token,
     );
   }
 
@@ -615,6 +645,7 @@ export class HtmlVideoAdapter {
       },
       30000,
       this.fetchImpl,
+      this.token,
     );
   }
 
@@ -632,6 +663,7 @@ export class HtmlVideoAdapter {
       },
       600000,
       this.fetchImpl,
+      this.token,
     );
     return this.getProject(projectId);
   }
@@ -699,6 +731,7 @@ export class HtmlVideoAdapter {
       { method: "POST" },
       600000,
       this.fetchImpl,
+      this.token,
     );
   }
 }
