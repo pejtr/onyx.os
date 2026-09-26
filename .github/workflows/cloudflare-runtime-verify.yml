@@ -1,0 +1,60 @@
+name: Cloudflare Runtime Router Verify
+
+on:
+  pull_request:
+    paths:
+      - "infra/cloudflare/onyx-runtimes/**"
+      - "infra/runtimes/**"
+      - "docs/ONYX-CLOUDFLARE-RUNTIMES.md"
+      - ".gitignore"
+      - ".github/workflows/cloudflare-runtime-verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-runtime-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Cloudflare runtime dry-run gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: infra/cloudflare/onyx-runtimes
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: infra/cloudflare/onyx-runtimes/package.json
+
+      - name: Install pinned Cloudflare tooling
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Syntax-check Worker
+        run: node --check src/index.js
+
+      - name: Assert POC blast-radius caps
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const raw = fs.readFileSync("wrangler.jsonc", "utf8");
+          const config = JSON.parse(raw);
+          if (config.containers.length !== 3) throw new Error("Expected exactly three runtime containers");
+          for (const item of config.containers) {
+            if (item.max_instances !== 1) throw new Error(`${item.class_name}: max_instances must stay at 1 for POC`);
+            if (!item.image_build_context) throw new Error(`${item.class_name}: image_build_context missing`);
+          }
+          NODE
+
+      - name: Wrangler bundle/config dry-run
+        run: npx wrangler deploy --dry-run --outdir .wrangler-dry-run --containers-rollout=none
