@@ -314,7 +314,7 @@ export const onyxMotionRouter = router({
       z.object({
         name: z.string().min(1).max(120),
         intent: z.string().max(1000).optional(),
-        preferences: z.record(z.unknown()).optional(),
+        preferences: z.record(z.string(), z.unknown()).optional(),
         humanApproved: z.literal(true),
       }),
     )
