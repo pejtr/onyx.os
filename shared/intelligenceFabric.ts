@@ -70,6 +70,17 @@ export interface GovernedAction {
   risk: GovernedActionRisk;
   description: string;
   reversible?: boolean;
+  environment?: "dev" | "eval" | "staging" | "production";
+  networkEgress?: boolean;
+  destinationHost?: string;
+  credentialAccess?: boolean;
+  credentialScope?: "none" | "ephemeral" | "environment" | "shared" | "admin";
+  toolEvidence?: {
+    source: "trusted_wrapper" | "agent_claim" | "human";
+    verified: boolean;
+    id?: string;
+  };
+  methodCompliance?: "verified" | "unknown" | "violated";
 }
 
 export interface GovernedActionDecision {
