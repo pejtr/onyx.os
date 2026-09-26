@@ -28,6 +28,15 @@ The first capability is available from the local deterministic ONYX planner even
 
 Current POC truth: `web.motion.plan`, `web.motion.apply`, `web.motion.export`, `web.video.fromPage`, `web.video.fromComponent`, `web.video.fromUrl`, and project-level `web.video.render` have implemented backend paths. Direct `web.motion.preview` remains explicitly **NOT IMPLEMENTED** until ONYX owns a safe tenant-scoped preview proxy.
 
+## Governance / Zero Trust
+
+- local deterministic planning: internal/read-only, autonomous
+- dependency-free CSS export: internal draft, autonomous
+- external motion suggestion: admin-only draft request
+- artifact create/edit/render/export: external write, HUMAN GATE
+- no adapter URL is exposed to the browser
+- no payment, DNS, deployment or production-site mutation is part of ONYX Motion v2
+
 ## Restraint gates
 
 Every ONYX plan enforces the initial motion quality gates:
@@ -60,9 +69,9 @@ ONYX_HTML_VIDEO_URL=http://127.0.0.1:3071
 
 Do not expose these values as `VITE_*` variables and do not proxy the upstream studios directly to public clients.
 
-The tRPC router intentionally exposes only adapter health state, not the configured internal URL.
+The tRPC router intentionally exposes only adapter health state, not the configured internal URL. In production, remote adapters must use HTTPS; plain HTTP is permitted only for loopback sidecars. Adapter fetches deny redirects.
 
-All procedures that execute or mutate an external motion/video runtime are **admin-gated** in the POC. This prevents cross-user artifact access while ONYX does not yet have a durable tenant/ownership ledger for upstream artifact IDs. Local planning and CSS export remain available to authenticated users.
+All procedures that create, edit, render or export state in an external motion/video runtime are **admin-gated and require explicit `humanApproved: true`**. The Motion Lab supplies this flag only from direct admin button actions. This is the ONYX external-write HUMAN GATE for the POC and prevents autonomous agents from silently mutating external artifacts. Local planning and CSS export remain available to authenticated users without this gate.
 
 ## motion-anything endpoints used
 
