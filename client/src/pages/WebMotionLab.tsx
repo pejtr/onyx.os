@@ -115,7 +115,7 @@ export default function WebMotionLab() {
       toast.error("motion-anything adapter není připojen. Nastav ONYX_MOTION_ANYTHING_URL.");
       return;
     }
-    generateMutation.mutate({ brief, profile });
+    generateMutation.mutate({ brief, profile, humanApproved: true });
   };
 
   const generateVideoFromUrl = () => {
@@ -131,12 +131,13 @@ export default function WebMotionLab() {
       name: "ONYX WEBY promo",
       url: videoUrl.trim(),
       instruction: "Create a concise 15-second promo suitable for 16:9 and later 9:16 adaptation.",
+      humanApproved: true,
     });
   };
 
   const exportVideo = () => {
     if (!videoProjectId) return;
-    videoExportMutation.mutate({ projectId: videoProjectId });
+    videoExportMutation.mutate({ projectId: videoProjectId, humanApproved: true });
   };
 
   return (
