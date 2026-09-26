@@ -2,6 +2,16 @@ export type OnyxBuildProviderId = "open-lovable";
 
 export type OnyxBuildMode = "sandbox_only";
 
+export type OnyxBuildStage =
+  | "ingest"
+  | "analyze"
+  | "plan"
+  | "generate"
+  | "sandbox"
+  | "verify"
+  | "preview"
+  | "propose";
+
 export interface OnyxBuildCreateFromUrlInput {
   sourceUrl: string;
   instruction: string;
@@ -32,16 +42,28 @@ export interface OnyxBuildArtifact {
 
 export interface OnyxBuildPlan {
   artifact: OnyxBuildArtifact;
-  stages: Array<
-    | "ingest"
-    | "analyze"
-    | "plan"
-    | "generate"
-    | "sandbox"
-    | "verify"
-    | "preview"
-    | "propose"
-  >;
+  stages: OnyxBuildStage[];
   nextAction: "execute_sandbox_build";
+  humanGateRequiredForGitWrite: true;
+}
+
+export interface OnyxBuildRuntimeStatus {
+  provider: OnyxBuildProviderId;
+  configured: boolean;
+  endpointConfigured: boolean;
+  authConfigured: boolean;
+  productionReady: boolean;
+  reason: string | null;
+}
+
+export interface OnyxBuildExecution {
+  status: "completed" | "failed";
+  artifact: OnyxBuildArtifact;
+  completedStages: OnyxBuildStage[];
+  errors: string[];
+  runtime: {
+    provider: OnyxBuildProviderId;
+    sandboxProvider: string | null;
+  };
   humanGateRequiredForGitWrite: true;
 }

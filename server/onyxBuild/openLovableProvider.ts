@@ -3,27 +3,19 @@ import type {
   OnyxBuildPlan,
 } from "../../shared/onyxBuild";
 import type { OnyxBuildProvider } from "./provider";
+import {
+  executeOpenLovableBuild,
+  getOpenLovableRuntimeStatus,
+  validatePublicSourceUrl,
+} from "./openLovableRuntime";
 
-function normalizeUrl(url: string): string {
-  const trimmed = url.trim();
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-}
-
-/**
- * Open Lovable provider adapter v0.
- *
- * This first slice is intentionally sandbox-only. It defines the execution
- * contract and provider boundary without granting repository, deployment,
- * DNS, secret, or production write capabilities.
- *
- * Runtime execution (Firecrawl ingest + isolated Vercel/E2B sandbox) is the
- * next slice behind this adapter.
- */
 export const openLovableProvider: OnyxBuildProvider = {
   id: "open-lovable",
 
+  runtimeStatus: getOpenLovableRuntimeStatus,
+
   async createFromUrl(input: OnyxBuildCreateFromUrlInput): Promise<OnyxBuildPlan> {
-    const sourceUrl = normalizeUrl(input.sourceUrl);
+    const sourceUrl = validatePublicSourceUrl(input.sourceUrl);
 
     return {
       artifact: {
@@ -56,4 +48,6 @@ export const openLovableProvider: OnyxBuildProvider = {
       humanGateRequiredForGitWrite: true,
     };
   },
+
+  executeFromUrl: executeOpenLovableBuild,
 };
