@@ -1,0 +1,61 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "onyx-runtime-router",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-25",
+  "observability": {
+    "enabled": true
+  },
+  "containers": [
+    {
+      "name": "onyx-open-lovable",
+      "class_name": "OpenLovableContainer",
+      "image": "../../runtimes/open-lovable/Dockerfile",
+      "image_build_context": "../../..",
+      "instance_type": "basic",
+      "max_instances": 1
+    },
+    {
+      "name": "onyx-motion-anything",
+      "class_name": "MotionAnythingContainer",
+      "image": "../../runtimes/motion-anything/Dockerfile",
+      "image_build_context": "../../..",
+      "instance_type": "standard-1",
+      "max_instances": 1
+    },
+    {
+      "name": "onyx-html-video",
+      "class_name": "HtmlVideoContainer",
+      "image": "../../runtimes/html-video/Dockerfile",
+      "image_build_context": "../../..",
+      "instance_type": "standard-1",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "OPEN_LOVABLE_CONTAINER",
+        "class_name": "OpenLovableContainer"
+      },
+      {
+        "name": "MOTION_ANYTHING_CONTAINER",
+        "class_name": "MotionAnythingContainer"
+      },
+      {
+        "name": "HTML_VIDEO_CONTAINER",
+        "class_name": "HtmlVideoContainer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "OpenLovableContainer",
+        "MotionAnythingContainer",
+        "HtmlVideoContainer"
+      ]
+    }
+  ]
+}
