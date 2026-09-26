@@ -1,0 +1,83 @@
+name: ONYX Motion Verify
+
+on:
+  pull_request:
+    paths:
+      - "shared/onyxMotion.ts"
+      - "server/onyxMotion.ts"
+      - "server/onyxMotion.test.ts"
+      - "server/routers/onyxMotionRouter.ts"
+      - "server/routers.ts"
+      - "client/src/pages/WebMotionLab.tsx"
+      - "client/src/App.tsx"
+      - "client/src/components/DashboardLayout.tsx"
+      - "client/src/i18n/**"
+      - "docs/ONYX-MOTION.md"
+      - ".github/workflows/onyx-motion-verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: onyx-motion-verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: ONYX Motion verification gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Focused ONYX Motion tests
+        run: pnpm vitest run server/onyxMotion.test.ts
+
+      - name: Focused Motion core typecheck
+        run: >
+          pnpm exec tsc --noEmit
+          --target ES2022
+          --module ESNext
+          --moduleResolution bundler
+          --skipLibCheck
+          --types node
+          server/onyxMotion.ts
+          shared/onyxMotion.ts
+
+      - name: Assert governance boundary
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const router = fs.readFileSync("server/routers/onyxMotionRouter.ts", "utf8");
+          const approvals = [...router.matchAll(/humanApproved: z\.literal\(true\)/g)].length;
+          const gates = [...router.matchAll(/requireExternalMotionApproval\(/g)].length - 1;
+          if (approvals !== 8) throw new Error(`Expected 8 explicit approval fields, got ${approvals}`);
+          if (gates !== 8) throw new Error(`Expected 8 external-write governance gates, got ${gates}`);
+          if (!router.includes('plan: protectedProcedure')) throw new Error("Local planner missing");
+          if (!router.includes('exportCss: protectedProcedure')) throw new Error("Local CSS export missing");
+          NODE
+
+      - name: Bundle Motion router and UI
+        run: |
+          pnpm exec esbuild server/routers/onyxMotionRouter.ts --bundle --platform=node --packages=external --format=esm --outfile=/tmp/onyx-motion-router.js
+          pnpm exec esbuild client/src/pages/WebMotionLab.tsx --bundle --platform=browser --packages=external --format=esm --outfile=/tmp/web-motion-lab.js
+
+      - name: Production build
+        run: pnpm build
