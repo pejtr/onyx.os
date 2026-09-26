@@ -129,6 +129,7 @@ import { googleMapsRouter } from "./routers/googleMapsRouter";
 import { webAuditRouter } from "./routers/webAuditRouter";
 import { aresRouter } from "./routers/ares";
 import { onyxBuildRouter } from "./routers/onyxBuildRouter";
+import { githubEvidenceRouter } from "./routers/githubEvidenceRouter";
 import {
   createTrackingPixel, getTrackingPixelsByUser, deleteTrackingPixel, updateTrackingPixel,
   getVisitorSessionsByPixel, getVisitorSessionsByUser, createVisitorSession,
@@ -2834,5 +2835,6 @@ Baseline by stage: new=10%, qualified=25%, presentation=40%, proposal=60%, negot
   webAudit: webAuditRouter,
   ares: aresRouter,
   onyxBuild: onyxBuildRouter,
+  githubEvidence: githubEvidenceRouter,
 });
 export type AppRouter = typeof appRouter;
