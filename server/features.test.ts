@@ -226,18 +226,18 @@ describe("social router", () => {
 });
 
 // ─── Integrations Router Tests ───
-describe("integrations router", () => {
+describe("webhook integrations router", () => {
   it("requires authentication for list", async () => {
     const { ctx } = createAnonContext();
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.integrations.list()).rejects.toThrow();
+    await expect(caller.webhookIntegrations.list()).rejects.toThrow();
   });
 
   it("requires authentication for create", async () => {
     const { ctx } = createAnonContext();
     const caller = appRouter.createCaller(ctx);
     await expect(
-      caller.integrations.create({
+      caller.webhookIntegrations.create({
         name: "Test Webhook",
         type: "generic",
         webhookUrl: "https://hooks.example.com/test",
@@ -286,6 +286,7 @@ describe("appRouter structure", () => {
     expect(caller.nba).toBeDefined();
     expect(caller.social).toBeDefined();
     expect(caller.integrations).toBeDefined();
+    expect(caller.webhookIntegrations).toBeDefined();
     expect(caller.autopilot).toBeDefined();
     expect(caller.leads).toBeDefined();
     expect(caller.auth).toBeDefined();
