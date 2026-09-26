@@ -272,4 +272,50 @@ describe("ONYX WEBY motion engine", () => {
     ).rejects.toThrow("MOTION_ANYTHING_NOT_CONFIGURED");
   });
 
+
+  it("sends the runtime bearer token server-side without exposing it in status", async () => {
+    const seen: Array<{ url: string; auth: string | null }> = [];
+    const fakeFetch = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      const headers = new Headers(init.headers);
+      seen.push({ url: String(input), auth: headers.get("authorization") });
+      return new Response(JSON.stringify({ projects: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    const adapter = new MotionAnythingAdapter(
+      "https://motion-runtime.example.com",
+      fakeFetch,
+      "runtime-secret-token",
+    );
+    const status = await adapter.status();
+
+    expect(status.reachable).toBe(true);
+    expect(seen).toEqual([
+      {
+        url: "https://motion-runtime.example.com/api/projects",
+        auth: "Bearer runtime-secret-token",
+      },
+    ]);
+    expect(JSON.stringify(status)).not.toContain("runtime-secret-token");
+  });
+
+  it("authenticates html-video runtime requests with its own bearer token", async () => {
+    const seen: string[] = [];
+    const fakeFetch = (async (_input: RequestInfo | URL, init: RequestInit = {}) => {
+      seen.push(new Headers(init.headers).get("authorization") ?? "");
+      return new Response(JSON.stringify({ projects: [] }), { status: 200 });
+    }) as typeof fetch;
+
+    const adapter = new HtmlVideoAdapter(
+      "https://video-runtime.example.com",
+      fakeFetch,
+      "video-runtime-secret",
+    );
+    await adapter.status();
+
+    expect(seen).toEqual(["Bearer video-runtime-secret"]);
+  });
+
 });
