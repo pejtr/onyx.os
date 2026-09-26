@@ -8,6 +8,9 @@ import type {
 
 const DEFAULT_TIMEOUT_MS = 180_000;
 const MAX_SOURCE_CONTEXT = 60_000;
+const MAX_GENERATED_CODE = 2_000_000;
+const MAX_GENERATED_FILES = 200;
+const MAX_PACKAGES = 50;
 let executionInFlight = false;
 
 type JsonRecord = Record<string, unknown>;
@@ -186,6 +189,52 @@ function completeEvent(events: JsonRecord[], label: string): JsonRecord {
   return complete;
 }
 
+export function assertSafeGeneratedPayload(code: string): void {
+  if (code.length > MAX_GENERATED_CODE) {
+    throw new Error("Generated payload exceeds the ONYX BUILD size limit.");
+  }
+  if (/<command>[\s\S]*?<\/command>/i.test(code)) {
+    throw new Error("AI-generated command execution is denied by ONYX BUILD policy.");
+  }
+
+  const filePaths = [...code.matchAll(/<file\s+path=["']([^"']+)["']/gi)].map(match => match[1]);
+  if (filePaths.length === 0) {
+    throw new Error("Generated payload contains no file artifacts.");
+  }
+  if (filePaths.length > MAX_GENERATED_FILES) {
+    throw new Error("Generated payload exceeds the ONYX BUILD file-count limit.");
+  }
+
+  for (const rawPath of filePaths) {
+    const normalized = rawPath.replace(/\\/g, "/").trim();
+    const segments = normalized.split("/");
+    if (
+      !normalized ||
+      normalized.startsWith("/") ||
+      /^[a-z]:\//i.test(normalized) ||
+      segments.includes("..") ||
+      normalized.includes("\0")
+    ) {
+      throw new Error(`Unsafe generated file path denied: ${rawPath}`);
+    }
+  }
+}
+
+export function sanitizePackageSpecs(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const packageSpec = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*(?:@[0-9a-z^~<>=*.+_-]+)?$/i;
+  const raw = value.filter(item => typeof item === "string").map(item => item.trim()).filter(Boolean);
+  if (raw.length > MAX_PACKAGES) {
+    throw new Error("Generated package list exceeds the ONYX BUILD package-count limit.");
+  }
+  for (const item of raw) {
+    if (!packageSpec.test(item)) {
+      throw new Error(`Unsafe package spec denied: ${item}`);
+    }
+  }
+  return [...new Set(raw)];
+}
+
 function initialArtifact(sourceUrl: string): OnyxBuildArtifact {
   return {
     sourceUrl,
@@ -277,11 +326,10 @@ export async function executeOpenLovableBuild(
     if (typeof generation.generatedCode !== "string" || !generation.generatedCode.trim()) {
       throw new Error("AI generation completed without generated code.");
     }
+    assertSafeGeneratedPayload(generation.generatedCode);
     completedStages.push("generate");
 
-    const packages = Array.isArray(generation.packagesToInstall)
-      ? generation.packagesToInstall.filter(item => typeof item === "string")
-      : [];
+    const packages = sanitizePackageSpecs(generation.packagesToInstall);
 
     const applied = completeEvent(
       await readSse("/api/apply-ai-code-stream", {
