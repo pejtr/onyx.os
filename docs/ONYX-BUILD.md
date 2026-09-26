@@ -34,7 +34,9 @@ For a remote production runtime, put Open Lovable behind a proxy that validates 
 ## Governance
 
 - source URL ingest: sandbox-only
-- generated files: sandbox-only
+- generated files: sandbox-only; absolute/traversal paths are denied
+- AI-generated `<command>` blocks are denied before upstream apply
+- package specs are restricted to registry-style names and capped before install
 - package install/build commands: sandbox-only
 - production touched: always `false`
 - Git writes: `external_write` -> HUMAN GATE
