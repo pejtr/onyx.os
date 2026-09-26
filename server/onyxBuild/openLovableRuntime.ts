@@ -8,6 +8,7 @@ import type {
 
 const DEFAULT_TIMEOUT_MS = 180_000;
 const MAX_SOURCE_CONTEXT = 60_000;
+let executionInFlight = false;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -209,6 +210,18 @@ export async function executeOpenLovableBuild(
   const completedStages: OnyxBuildStage[] = [];
   let sandboxProvider: string | null = null;
 
+  if (executionInFlight) {
+    return {
+      status: "failed",
+      artifact,
+      completedStages,
+      errors: ["Another Open Lovable sandbox build is already running; concurrent builds are denied fail-closed."],
+      runtime: { provider: "open-lovable", sandboxProvider: null },
+      humanGateRequiredForGitWrite: true,
+    };
+  }
+
+  executionInFlight = true;
   try {
     const scrape = await postJson("/api/scrape-url-enhanced", { url: sourceUrl });
     if (scrape.success !== true) throw new Error(String(scrape.error ?? "Source ingest failed."));
@@ -333,5 +346,7 @@ export async function executeOpenLovableBuild(
       runtime: { provider: "open-lovable", sandboxProvider },
       humanGateRequiredForGitWrite: true,
     };
+  } finally {
+    executionInFlight = false;
   }
 }
