@@ -1,5 +1,7 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { decideGovernedAction } from "../governedExecution";
 import {
   HtmlVideoAdapter,
   MotionAnythingAdapter,
@@ -36,6 +38,28 @@ function publicStatus<T extends { name: string; configured: boolean; reachable: 
     reachable: status.reachable,
     detail: status.detail,
   };
+}
+
+function requireExternalMotionApproval(
+  action: string,
+  description: string,
+  humanApproved: true,
+) {
+  const governance = decideGovernedAction({
+    action,
+    risk: "external_write",
+    description,
+    reversible: true,
+  });
+
+  if (governance.decision !== "human_gate" || humanApproved !== true) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "HUMAN_APPROVAL_REQUIRED",
+    });
+  }
+
+  return governance;
 }
 
 export const onyxMotionRouter = router({
@@ -151,9 +175,15 @@ export const onyxMotionRouter = router({
         profile: profileSchema.default("PRODUCT"),
         designSystem: z.string().max(120).optional(),
         cli: z.string().max(80).optional(),
+        humanApproved: z.literal(true),
       }),
     )
     .mutation(async ({ input }) => {
+      requireExternalMotionApproval(
+        "onyx.motion.generateWebArtifact",
+        "Create a generated artifact in the configured motion-anything runtime.",
+        input.humanApproved,
+      );
       const adapter = new MotionAnythingAdapter();
       return adapter.generate({
         brief: input.brief,
@@ -172,9 +202,15 @@ export const onyxMotionRouter = router({
         profile: profileSchema.default("PRODUCT"),
         designSystem: z.string().max(120).optional(),
         cli: z.string().max(80).optional(),
+        humanApproved: z.literal(true),
       }),
     )
     .mutation(async ({ input }) => {
+      requireExternalMotionApproval(
+        "onyx.motion.editWebArtifact",
+        "Edit an artifact in the configured motion-anything runtime.",
+        input.humanApproved,
+      );
       const adapter = new MotionAnythingAdapter();
       return adapter.edit({
         slug: input.slug,
@@ -193,11 +229,18 @@ export const onyxMotionRouter = router({
         duration: z.number().min(1).max(60).default(15),
         resolution: z.enum(["landscape", "portrait"]).default("landscape"),
         quality: z.enum(["low", "medium", "high"]).default("high"),
+        humanApproved: z.literal(true),
       }),
     )
     .mutation(async ({ input }) => {
+      requireExternalMotionApproval(
+        "onyx.motion.renderWebArtifact",
+        "Render an external motion artifact to video.",
+        input.humanApproved,
+      );
       const adapter = new MotionAnythingAdapter();
-      return adapter.renderHtmlVideo(input);
+      const { humanApproved: _humanApproved, ...request } = input;
+      return adapter.renderHtmlVideo(request);
     }),
 
   videoFromUrl: adminProcedure
@@ -206,11 +249,18 @@ export const onyxMotionRouter = router({
         name: z.string().min(1).max(120),
         url: z.string().url().max(2048),
         instruction: z.string().min(3).max(4000).optional(),
+        humanApproved: z.literal(true),
       }),
     )
     .mutation(async ({ input }) => {
+      requireExternalMotionApproval(
+        "onyx.motion.videoFromUrl",
+        "Create an external html-video project from a public page URL.",
+        input.humanApproved,
+      );
       const adapter = new HtmlVideoAdapter();
-      return adapter.generateFromUrl(input);
+      const { humanApproved: _humanApproved, ...request } = input;
+      return adapter.generateFromUrl(request);
     }),
 
   videoFromPage: adminProcedure
@@ -219,12 +269,19 @@ export const onyxMotionRouter = router({
         name: z.string().min(1).max(120),
         html: z.string().min(20).max(250_000),
         instruction: z.string().min(3).max(4000).optional(),
+        humanApproved: z.literal(true),
       }),
     )
     .mutation(async ({ input }) => {
+      requireExternalMotionApproval(
+        "onyx.motion.videoFromPage",
+        "Create an external html-video project from page HTML.",
+        input.humanApproved,
+      );
       const adapter = new HtmlVideoAdapter();
+      const { humanApproved: _humanApproved, ...request } = input;
       return adapter.generateFromHtml({
-        ...input,
+        ...request,
         sourceLabel: "ONYX WEBY full page HTML",
       });
     }),
@@ -235,12 +292,19 @@ export const onyxMotionRouter = router({
         name: z.string().min(1).max(120),
         html: z.string().min(10).max(100_000),
         instruction: z.string().min(3).max(4000).optional(),
+        humanApproved: z.literal(true),
       }),
     )
     .mutation(async ({ input }) => {
+      requireExternalMotionApproval(
+        "onyx.motion.videoFromComponent",
+        "Create an external html-video project from component HTML.",
+        input.humanApproved,
+      );
       const adapter = new HtmlVideoAdapter();
+      const { humanApproved: _humanApproved, ...request } = input;
       return adapter.generateFromHtml({
-        ...input,
+        ...request,
         sourceLabel: "ONYX WEBY component HTML",
       });
     }),
@@ -251,16 +315,33 @@ export const onyxMotionRouter = router({
         name: z.string().min(1).max(120),
         intent: z.string().max(1000).optional(),
         preferences: z.record(z.unknown()).optional(),
+        humanApproved: z.literal(true),
       }),
     )
     .mutation(async ({ input }) => {
+      requireExternalMotionApproval(
+        "onyx.motion.createVideoProject",
+        "Create an external html-video project.",
+        input.humanApproved,
+      );
       const adapter = new HtmlVideoAdapter();
-      return adapter.createProject(input);
+      const { humanApproved: _humanApproved, ...request } = input;
+      return adapter.createProject(request);
     }),
 
   exportVideoProject: adminProcedure
-    .input(z.object({ projectId: z.string().min(1).max(200) }))
+    .input(
+      z.object({
+        projectId: z.string().min(1).max(200),
+        humanApproved: z.literal(true),
+      }),
+    )
     .mutation(async ({ input }) => {
+      requireExternalMotionApproval(
+        "onyx.motion.exportVideoProject",
+        "Render/export an external html-video project.",
+        input.humanApproved,
+      );
       const adapter = new HtmlVideoAdapter();
       return adapter.exportProject(input.projectId);
     }),
