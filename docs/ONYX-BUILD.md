@@ -16,7 +16,7 @@ ONYX OS
         -> sandbox smoke/health check
 ```
 
-The Open Lovable service owns its Firecrawl, LLM and sandbox credentials. ONYX OS does not proxy or expose those provider secrets.
+The Open Lovable service owns its Firecrawl, LLM and sandbox credentials. ONYX OS does not proxy or expose those provider secrets. Use a dedicated ONYX Open Lovable instance: the upstream runtime maintains global active-sandbox state, so ONYX serializes builds and must not share that instance with unrelated interactive sessions.
 
 ## ONYX OS environment
 
