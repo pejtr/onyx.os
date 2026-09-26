@@ -29,14 +29,17 @@ function isPrivateIpv4(hostname: string): boolean {
 
 function isBlockedHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  const ipv6Literal = host.includes(":");
   return (
     host === "localhost" ||
     host.endsWith(".localhost") ||
     host.endsWith(".local") ||
     host === "::1" ||
-    host.startsWith("fc") ||
-    host.startsWith("fd") ||
-    host.startsWith("fe80:") ||
+    (ipv6Literal && (
+      host.startsWith("fc") ||
+      host.startsWith("fd") ||
+      host.startsWith("fe80:")
+    )) ||
     isPrivateIpv4(host)
   );
 }
