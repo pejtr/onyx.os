@@ -1,10 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { onyxMotionRouter } from "./routers/onyxMotionRouter";
 import {
   HtmlVideoAdapter,
   MotionAnythingAdapter,
   exportMotionCss,
   planOnyxMotion,
 } from "./onyxMotion";
+
+
+const originalNodeEnv = process.env.NODE_ENV;
+
+afterEach(() => {
+  if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = originalNodeEnv;
+});
 
 describe("ONYX WEBY motion engine", () => {
   it("enforces one attention moment and one ambient loop", () => {
@@ -217,6 +226,50 @@ describe("ONYX WEBY motion engine", () => {
     ]);
     expect(calls[1]?.body).toContain("Real product claim");
     expect(calls[2]?.body).toContain("Use only claims that are supported");
+  });
+
+
+  it("rejects insecure remote adapter URLs in production but allows loopback sidecars", () => {
+    process.env.NODE_ENV = "production";
+
+    expect(() => new MotionAnythingAdapter("http://runtime.example.com")).toThrow(
+      "Remote production adapter URL must use https",
+    );
+    expect(() => new MotionAnythingAdapter("http://127.0.0.1:4399")).not.toThrow();
+    expect(() => new MotionAnythingAdapter("https://runtime.example.com")).not.toThrow();
+  });
+
+  it("requires explicit admin human approval before external artifact creation", async () => {
+    const caller = onyxMotionRouter.createCaller({
+      user: {
+        id: 1,
+        openId: "admin-test",
+        email: "admin@example.com",
+        name: "Admin",
+        loginMethod: "test",
+        role: "admin",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastSignedIn: new Date(),
+      },
+      req: { protocol: "https", headers: {} },
+      res: {},
+    } as any);
+
+    await expect(
+      caller.generateWebArtifact({
+        brief: "Create a restrained product hero with one clear motion moment.",
+        profile: "PRODUCT",
+      } as any),
+    ).rejects.toThrow();
+
+    await expect(
+      caller.generateWebArtifact({
+        brief: "Create a restrained product hero with one clear motion moment.",
+        profile: "PRODUCT",
+        humanApproved: true,
+      }),
+    ).rejects.toThrow("MOTION_ANYTHING_NOT_CONFIGURED");
   });
 
 });
