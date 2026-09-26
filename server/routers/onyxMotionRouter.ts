@@ -29,6 +29,10 @@ function upstreamProfile(profile: OnyxMotionProfile) {
   return "lively";
 }
 
+function defaultMotionRuntimeCli() {
+  return process.env.ONYX_MOTION_DEFAULT_CLI?.trim() || "byok";
+}
+
 function publicStatus<T extends { name: string; configured: boolean; reachable: boolean; detail?: string }>(
   status: T,
 ) {
@@ -165,7 +169,10 @@ export const onyxMotionRouter = router({
     )
     .mutation(async ({ input }) => {
       const adapter = new MotionAnythingAdapter();
-      return adapter.suggest(input);
+      return adapter.suggest({
+        ...input,
+        cli: input.cli ?? defaultMotionRuntimeCli(),
+      });
     }),
 
   generateWebArtifact: adminProcedure
@@ -189,7 +196,7 @@ export const onyxMotionRouter = router({
         brief: input.brief,
         designSystem: input.designSystem,
         motionProfile: upstreamProfile(input.profile),
-        cli: input.cli,
+        cli: input.cli ?? defaultMotionRuntimeCli(),
       });
     }),
 
@@ -218,7 +225,7 @@ export const onyxMotionRouter = router({
         scope: input.scope,
         designSystem: input.designSystem,
         motionProfile: upstreamProfile(input.profile),
-        cli: input.cli,
+        cli: input.cli ?? defaultMotionRuntimeCli(),
       });
     }),
 
