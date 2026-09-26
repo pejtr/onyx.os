@@ -1,0 +1,71 @@
+name: GitHub Evidence Verify
+
+on:
+  pull_request:
+    paths:
+      - "server/githubEvidence.ts"
+      - "server/githubEvidence.test.ts"
+      - "server/routers/githubEvidenceRouter.ts"
+      - "server/routers.ts"
+      - "server/knowledgeFabric.ts"
+      - "shared/intelligenceFabric.ts"
+      - "docs/ONYX_INTELLIGENCE_FABRIC.md"
+      - ".github/workflows/github-evidence-verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-evidence-verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: GitHub Evidence verification gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Focused connector tests
+        run: pnpm vitest run server/githubEvidence.test.ts
+
+      - name: Focused connector typecheck
+        run: >
+          pnpm exec tsc --noEmit
+          --target ES2022
+          --module ESNext
+          --moduleResolution bundler
+          --skipLibCheck
+          --types node
+          server/githubEvidence.ts
+          shared/intelligenceFabric.ts
+
+      - name: Bundle GitHub Evidence router
+        run: >
+          pnpm exec esbuild server/routers/githubEvidenceRouter.ts
+          --bundle
+          --platform=node
+          --packages=external
+          --format=esm
+          --outfile=/tmp/github-evidence-router.js
+
+      - name: Production build
+        run: pnpm build
