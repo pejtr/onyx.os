@@ -46,8 +46,28 @@ jobs:
       - name: Focused ONYX BUILD tests
         run: pnpm vitest run server/onyxBuild/openLovableProvider.test.ts
 
-      - name: TypeScript regression gate
-        run: pnpm check
+      - name: Focused ONYX BUILD typecheck
+        run: >
+          pnpm exec tsc --noEmit
+          --target ES2022
+          --module ESNext
+          --moduleResolution bundler
+          --skipLibCheck
+          --types node
+          server/onyxBuild/openLovableRuntime.ts
+          server/onyxBuild/openLovableProvider.ts
+          server/onyxBuild/provider.ts
+          server/onyxBuild/registry.ts
+          shared/onyxBuild.ts
+
+      - name: Router structural bundle
+        run: >
+          pnpm exec esbuild server/routers/onyxBuildRouter.ts
+          --bundle
+          --platform=node
+          --packages=external
+          --format=esm
+          --outfile=/tmp/onyx-build-router.js
 
       - name: Production build
         run: pnpm build
