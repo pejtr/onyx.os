@@ -1,0 +1,54 @@
+name: ONYX BUILD Verify
+
+on:
+  pull_request:
+    paths:
+      - "server/onyxBuild/**"
+      - "server/routers/onyxBuildRouter.ts"
+      - "shared/onyxBuild.ts"
+      - "docs/ONYX-BUILD.md"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/onyx-build-verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: onyx-build-verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: ONYX BUILD verification gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Focused ONYX BUILD tests
+        run: pnpm vitest run server/onyxBuild/openLovableProvider.test.ts
+
+      - name: TypeScript regression gate
+        run: pnpm check
+
+      - name: Production build
+        run: pnpm build
