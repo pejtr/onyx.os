@@ -308,7 +308,7 @@ async function fetchJson(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(url, { ...init, signal: controller.signal });
+    const response = await fetchImpl(url, { ...init, redirect: "error", signal: controller.signal });
     const text = await response.text();
     let body: unknown = null;
     try {
@@ -334,7 +334,7 @@ async function fetchText(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(url, { ...init, signal: controller.signal });
+    const response = await fetchImpl(url, { ...init, redirect: "error", signal: controller.signal });
     const body = await response.text();
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${body.slice(0, 500)}`);
@@ -371,12 +371,24 @@ function assertPublicSourceUrl(value: string) {
   return url.toString();
 }
 
+function isLoopbackAdapterHost(hostname: string) {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
 function normalizedBaseUrl(value?: string) {
   const raw = value?.trim();
   if (!raw) return null;
   const url = new URL(raw);
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Adapter URL must use http or https.");
+  }
+  if (
+    process.env.NODE_ENV === "production" &&
+    url.protocol !== "https:" &&
+    !isLoopbackAdapterHost(url.hostname)
+  ) {
+    throw new Error("Remote production adapter URL must use https.");
   }
   return url.toString().replace(/\/$/, "");
 }
