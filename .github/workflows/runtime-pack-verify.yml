@@ -1,0 +1,77 @@
+name: ONYX Runtime Pack Verify
+
+on:
+  pull_request:
+    paths:
+      - "infra/runtimes/**"
+      - "server/onyxMotion.ts"
+      - "server/onyxMotion.test.ts"
+      - "server/routers/onyxMotionRouter.ts"
+      - "docs/ONYX-MOTION.md"
+      - "docs/ONYX-RUNTIME-PACK.md"
+      - ".github/workflows/runtime-pack-verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: onyx-runtime-pack-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Runtime pack structural gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install ONYX dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Focused ONYX adapter tests
+        run: pnpm vitest run server/onyxMotion.test.ts server/onyxBuild/openLovableProvider.test.ts
+
+      - name: Syntax-check runtime helpers
+        run: |
+          node --check infra/runtimes/common/gateway.mjs
+          node --check infra/runtimes/motion-anything/bootstrap-byok.mjs
+          bash -n infra/runtimes/common/start-runtime.sh
+
+      - name: Assert pinned upstream revisions
+        run: |
+          grep -q "69bd93bae7a9c97ef989eb70aabe6797fb3dac89" infra/runtimes/open-lovable/Dockerfile
+          grep -q "b016900d9ee92fc2d3e4dc520359cc8999d2ed4e" infra/runtimes/motion-anything/Dockerfile
+          grep -q "c414ecc07f795add03807d5d9ce4baefd807cea2" infra/runtimes/html-video/Dockerfile
+          grep -q "HYPERFRAMES_VERSION=0.8.78" infra/runtimes/motion-anything/Dockerfile
+
+      - name: Assert gateway fail-closed boundary
+        run: |
+          grep -q "ONYX_RUNTIME_TOKEN must be configured" infra/runtimes/common/gateway.mjs
+          grep -q 'req.url.startsWith("/api/")' infra/runtimes/common/gateway.mjs
+          grep -q "UNAUTHORIZED" infra/runtimes/common/gateway.mjs
+          grep -q "delete headers.authorization" infra/runtimes/common/gateway.mjs
+
+      - name: Validate compose configuration
+        env:
+          ONYX_OPEN_LOVABLE_TOKEN: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          ONYX_MOTION_ANYTHING_TOKEN: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          ONYX_HTML_VIDEO_TOKEN: cccccccccccccccccccccccccccccccccccccccccccccccc
+        run: docker compose -f infra/runtimes/docker-compose.yml config -q
+
+      - name: Production ONYX build
+        run: pnpm build

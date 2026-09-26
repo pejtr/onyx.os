@@ -64,10 +64,14 @@ Configure adapter URLs only on the server:
 
 ```env
 ONYX_MOTION_ANYTHING_URL=http://127.0.0.1:4399
+ONYX_MOTION_ANYTHING_TOKEN=<server-only bearer token>
+ONYX_MOTION_DEFAULT_CLI=byok
+
 ONYX_HTML_VIDEO_URL=http://127.0.0.1:3071
+ONYX_HTML_VIDEO_TOKEN=<server-only bearer token>
 ```
 
-Do not expose these values as `VITE_*` variables and do not proxy the upstream studios directly to public clients.
+Do not expose these values as `VITE_*` variables and do not proxy the upstream studios directly to public clients. When the ONYX Runtime Pack gateway is used, the adapter sends its bearer token only from the server. The token is not included in the public status response.
 
 The tRPC router intentionally exposes only adapter health state, not the configured internal URL. In production, remote adapters must use HTTPS; plain HTTP is permitted only for loopback sidecars. Adapter fetches deny redirects.
 
@@ -83,7 +87,7 @@ The adapter currently uses the upstream runtime endpoints verified from `nexu-io
 - `POST /api/edit` — edit an existing artifact
 - `POST /api/hf-render` — HyperFrames HD MP4 export
 
-ONYX maps PRODUCT to upstream `lively`, rather than inventing a new upstream profile.
+ONYX maps PRODUCT to upstream `lively`, rather than inventing a new upstream profile. Runtime generation defaults to `ONYX_MOTION_DEFAULT_CLI=byok`, so a persistent container does not depend on an interactively logged-in desktop CLI.
 
 ## html-video endpoints used
 
