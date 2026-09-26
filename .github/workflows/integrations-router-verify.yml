@@ -1,0 +1,69 @@
+name: Integrations Router Verify
+
+on:
+  pull_request:
+    paths:
+      - "server/routers.ts"
+      - "server/features.test.ts"
+      - "client/src/pages/Integrations.tsx"
+      - ".github/workflows/integrations-router-verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integrations-router-verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Integrations router verification gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Assert router namespaces
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const router = fs.readFileSync("server/routers.ts", "utf8");
+          const ui = fs.readFileSync("client/src/pages/Integrations.tsx", "utf8");
+
+          const count = (text, re) => [...text.matchAll(re)].length;
+          const registry = count(router, /^  integrations:\s*integrationsRouter,/gm);
+          const legacy = count(router, /^  webhookIntegrations:\s*router\(\{/gm);
+
+          if (registry !== 1) throw new Error(`Expected exactly one registry integrations router, got ${registry}`);
+          if (legacy !== 1) throw new Error(`Expected exactly one webhookIntegrations router, got ${legacy}`);
+          if (ui.includes("trpc.integrations.")) throw new Error("Legacy webhook UI still calls trpc.integrations");
+          if (!ui.includes("trpc.webhookIntegrations.")) throw new Error("Webhook UI is not bound to webhookIntegrations");
+          NODE
+
+      - name: Focused router tests
+        run: pnpm vitest run server/features.test.ts -t "webhook integrations router|appRouter structure"
+
+      - name: Bundle router and integrations UI
+        run: |
+          pnpm exec esbuild server/routers.ts --bundle --platform=node --packages=external --format=esm --outfile=/tmp/routers.js
+          pnpm exec esbuild client/src/pages/Integrations.tsx --bundle --platform=browser --packages=external --format=esm --outfile=/tmp/integrations.js
+
+      - name: Production build
+        run: pnpm build
